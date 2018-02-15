@@ -12,12 +12,12 @@
 4. You can convert the received `byte[]` to a `String` using the utility method `MCipherUtils.encodeToStr(byte[] data)`.
 5. When running **MCipher on Android version previous to 23**, it is **vital** to call `MEncryptor.encryptLargeData()` when trying to encrypt data with more than 200 symbols.
 
-```
+```java
 MEncryptor encryptor;
 final String keyAlias = "my.package.cipher.alias";
 //...
 // initializing
-private void initializeEncryptorAndDecryptor()
+private void initializeEncryptor()
 {
     try {
         encryptor = new MEncryptor();
@@ -28,16 +28,14 @@ private void initializeEncryptorAndDecryptor()
             "Something went wrong while initializing the MEncryptor." +
             "%n\t Exception: [%s]" +
             "%n\t Cause: %s",
-        e.getClass().getSimpleName(), e.getCause());
+            e.getClass().getSimpleName(), e.getCause());
         Log.e(TAG, errorMsg);
         encryptor = null;
     }
 }
 //...
 // encrypting some text
-private void encryptTypedData() {
-    String dataToEncrypt = editDataToEncrypt.getText().toString();
-
+private void encryptData(String dataToEncrypt) {
     if ( !dataToEncrypt.isEmpty() || dataToEncrypt.length() > 0 )
     {
         try {
@@ -58,10 +56,52 @@ private void encryptTypedData() {
 }
 ```
 
+## Decrypting data
+1. Instantiate and Initialize a `MDecryptor.class`.
+2. Call `MDecryptor.decrypt( String alias, final byte[] encryptedData )`.
+3. Use the **alias** used during the encryption of the data.
+4. When running **MCipher on Android version previous to 23**, it is **vital** to call `MDecryptor.decryptLargeData()` when trying to decrypt data with more than 200 symbols. **Notice that the data must have been encrypted with `MEncryptor.encryptLargeData()`.
+
+```java
+MDecryptor decryptor;
+\\...
+\\ initializing
+private void initializeDecryptor()
+{
+    try {
+        decryptor = new MDecryptor();
+    }
+    catch ( DecryptorException e )
+    {
+        String errorMsg = String.format("" +
+            "Something went wrong while initializing the MDecryptor." +
+            "%n\t Exception: [%s]" +
+            "%n\t Cause: %s",
+            e.getClass().getSimpleName(), e.getCause());
+        Log.e(TAG, errorMsg);
+        decryptor = null;
+    }
+}
+\\...
+\\ decrypting data
+private void decryptData( byte[] encryptedData ) {
+    if ( decryptor == null && encryptedData == null ) {
+        Log.w(TAG, "Trying to decrypt with 'null' Decryptor or empty decrypted string.");
+        return;
+    }
+    try {
+        String decrypted = decryptor.decrypt(keyAlias, encryptedData);
+        Log.i(TAG, String.format("Decrypted:%n\t%s", decrypted));
+    } catch (DecryptorException e) {
+        Log.e(TAG, String.format("Error while trying to decrypt data." +
+            "%n\t %s %n\t %s", e.getMessage(), e.getCause()));
+    }
+}
+```
 
 ## TODO
 - [ ] Publish a working sample.
-- [ ] Explain how to use the library.
+- [x] Explain how to use the library.
 - [ ] Provide link to download from jCenter.
 - [ ] Automatically check the size of the encryption data, using `encryptLarge` only when necessary.
 - [ ] Use random property while generating the Key.
