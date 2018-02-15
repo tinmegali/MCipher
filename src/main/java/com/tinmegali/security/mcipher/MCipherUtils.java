@@ -3,14 +3,7 @@ package com.tinmegali.security.mcipher;
 import android.util.Base64;
 
 /**
- * com.tinmegali.security.ciphersamples.cipher | CipherSamples
- * __________________________________
- * Created by tinmegali
- * 09/02/2018
- *
- * @see <a href="http://www.tinmegali.com">tinmegali.com</a>
- * @see <a href="http://github.com/tinmegali">github</a>
- * ___________________________________
+ * Utility class with static helper methods to encryption/decryption operations.
  */
 
 public class MCipherUtils {

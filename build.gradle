@@ -88,3 +88,11 @@ task exportAAR(dependsOn: "assemble" + buildType.capitalize(), type: Copy, group
     include(sourceFilename)
     rename(sourceFilename, targetFilename)
 }
+
+/***** JAVADOC ******/
+task javadoc(type: Javadoc) {
+    failOnError = false
+    source = android.sourceSets.main.java.sourceFiles
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    classpath += configurations.compile
+}
