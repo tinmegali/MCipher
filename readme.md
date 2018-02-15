@@ -86,7 +86,7 @@ private void initializeDecryptor()
 \\ decrypting data
 private void decryptData( byte[] encryptedData ) {
     if ( decryptor == null && encryptedData == null ) {
-        Log.w(TAG, "Trying to decrypt with 'null' Decryptor or empty decrypted string.");
+        Log.w(TAG, "Trying to decrypt with 'null' MDecryptor or empty decrypted string.");
         return;
     }
     try {
@@ -105,3 +105,4 @@ private void decryptData( byte[] encryptedData ) {
 - [ ] Provide link to download from jCenter.
 - [ ] Automatically check the size of the encryption data, using `encryptLarge` only when necessary.
 - [ ] Use random property while generating the Key.
+- [ ] Give the possibility to customize the algorithm, provider and transformation.
