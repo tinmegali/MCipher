@@ -4,7 +4,7 @@ import android.os.Build;
 
 /**
  * Holds constant values used by the encryption/decryption
- * process by the {@link Encryptor} and {@link Decryptor} classes.
+ * process by the {@link MEncryptor} and {@link MDecryptor} classes.
  */
 
 class Constants {

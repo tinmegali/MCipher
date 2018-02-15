@@ -45,12 +45,12 @@ import javax.security.auth.x500.X500Principal;
  */
 
 @SuppressWarnings("JavaDoc")
-public class Encryptor {
+public class MEncryptor {
 
-    private final String TAG = Encryptor.class.getSimpleName();
+    private final String TAG = MEncryptor.class.getSimpleName();
     private KeyStore keyStore;
 
-    public Encryptor() throws EncryptorException {
+    public MEncryptor() throws EncryptorException {
         try {
             initKeyStore();
         } catch (CertificateException | KeyStoreException
@@ -87,12 +87,12 @@ public class Encryptor {
      *
      * Notice that in SDK versions previous to 23, to encrypt big chunks of data
      * this method won't work. For those situations, use
-     * {@link Encryptor#encryptLargeData(String, String, Context)}.
+     * {@link MEncryptor#encryptLargeData(String, String, Context)}.
      *
      * @param alias         unique name used by to the SecretKey/SecretPair and Cipher
      * @param textToEncrypt String to encrypt. For API previous to 23, the text must be smaller
      *                      than 250 symbols.
-     * @return  a serialized byte array of a {@link EncryptedObject},
+     * @return  a serialized byte array of a {@link MEncryptedObject},
      * containing the encrypted data and some the IV vector, if needed.
      * @throws EncryptorException   a wrapper {@link Exception}.
      */
@@ -110,7 +110,7 @@ public class Encryptor {
             // get an encrypted byte[], containing a IV vector if needed.
 
 //            Log.i(TAG, String.format("Encrypted: %n\t%s", encryptedStr ));
-            return encryptData( CipherUtils.decode( textToEncrypt ), cipher );
+            return encryptData( MCipherUtils.decode( textToEncrypt ), cipher );
 
         }
         catch (UnrecoverableEntryException | NoSuchAlgorithmException
@@ -133,11 +133,11 @@ public class Encryptor {
     /**
      * Uses AES algorithm to encrypt large chunks of data. If the method
      * is called from SDK 23+, it will make a standard encryption operation,
-     * calling {@link Encryptor#encrypt(String, String, Context)}. If the method
+     * calling {@link MEncryptor#encrypt(String, String, Context)}. If the method
      * id called from SDK < 23, it will make the encryption using
      * an AES algorithm, from the Bouncy Castle provider calling
-     * {@link Encryptor#wrapperCipher(String, Context)} to get the cipher and
-     * then calling {@link Encryptor#encryptData(byte[], Cipher)} providing the cipher.
+     * {@link MEncryptor#wrapperCipher(String, Context)} to get the cipher and
+     * then calling {@link MEncryptor#encryptData(byte[], Cipher)} providing the cipher.
      *
      * @param alias unique identifier to get/generate the standard SecretKey
      * @param dataToEncrypt data to encrypt
@@ -156,7 +156,7 @@ public class Encryptor {
                 return encrypt( alias, dataToEncrypt, context);
             } else {
                 Cipher cipher = wrapperCipher( alias, context );
-                return encryptData(  CipherUtils.decode(dataToEncrypt) , cipher );
+                return encryptData(  MCipherUtils.decode(dataToEncrypt) , cipher );
             }
         } catch (NoSuchPaddingException | NoSuchAlgorithmException
                 | InvalidAlgorithmParameterException | InvalidKeyException
@@ -177,17 +177,17 @@ public class Encryptor {
 
     /**
      * Encrypt a given {@link String} using the given {@link Cipher}, returning an
-     * serialized byte array of a {@link EncryptedObject}. The serialization process is
-     * done using {@link EncryptedObject#serializeEncryptedObj(byte[])} for encryption
+     * serialized byte array of a {@link MEncryptedObject}. The serialization process is
+     * done using {@link MEncryptedObject#serializeEncryptedObj(byte[])} for encryption
      * process that using 'RSA' algorithm (API < 23) and
-     * {@link EncryptedObject#serializeEncryptedObj(byte[], byte[])} for encryption with
+     * {@link MEncryptedObject#serializeEncryptedObj(byte[], byte[])} for encryption with
      * 'AES' algorithm (API23+).
      *
      * @param toEncrypt The data to encrypt. It must use a charset UTF-8.
      * @param cipher    The correct Cipher for the encryption process. The cipher must be
      *                  initialized correctly, taking into consideration the current API
      *                  and chosen operations.
-     * @return          A serialized {@link EncryptedObject}, containing the necessary
+     * @return          A serialized {@link MEncryptedObject}, containing the necessary
      * information for a future description: The IV vector.
      *
      * @throws UnrecoverableEntryException
@@ -217,7 +217,7 @@ public class Encryptor {
         // unless this operation is related to a big data operation
         byte[] cipherIV = cipher.getIV();
 
-        return EncryptedObject.serializeEncryptedObj( encryptedData, cipherIV );
+        return MEncryptedObject.serializeEncryptedObj( encryptedData, cipherIV );
     }
 
     /**
@@ -266,7 +266,7 @@ public class Encryptor {
     /**
      * Tries to recover a {@link SecretKey} from the {@link KeyStore} using
      * the given 'alias'. If a SecretKey is not found, it calls the
-     * {@link Encryptor#generateSecretKey(String)}, that generates and
+     * {@link MEncryptor#generateSecretKey(String)}, that generates and
      * returns the SecretKey.
      *
      * @param alias unique identifier used to store the {@link SecretKey}.
@@ -299,7 +299,7 @@ public class Encryptor {
      *
      * The {@link KeyGenerator} will use the 'AES' algorithm with 'AndroidKeyStore' provider.
      *
-     * To be used only with Android 23+. For API between 18 an 22, use {@link Encryptor#generateKeyPair(String, Context)}.
+     * To be used only with Android 23+. For API between 18 an 22, use {@link MEncryptor#generateKeyPair(String, Context)}.
      *
      * @param alias an unique identifier that is(or will be) tight to a {@link KeyGenerator}.
      * @return  A symmetric key. {@link SecretKey}
@@ -334,7 +334,7 @@ public class Encryptor {
 
     /**
      * Tries to recover a {@link KeyPair} from the {@link KeyStore} with the
-     * given 'alias'. If there isn't such KeyPair, it calls {@link Encryptor#generateKeyPair(String, Context)},
+     * given 'alias'. If there isn't such KeyPair, it calls {@link MEncryptor#generateKeyPair(String, Context)},
      * returning the generated KeyPair.
      * @param alias an unique identifies that is or will be tight to the KeyPair
      * @param context the current Context
@@ -375,7 +375,7 @@ public class Encryptor {
      * The {@link KeyPairGenerator} will use the 'RSA' algorithm and the
      * 'AndroidKeyStore' provider.
      *
-     * To be used only with Android 18 till 22. For API 23+ use {@link Encryptor#generateSecretKey(String)}.
+     * To be used only with Android 18 till 22. For API 23+ use {@link MEncryptor#generateSecretKey(String)}.
      *
      * @param alias     An unique identifier that is(or will be) tight to a {@link KeyPairGenerator}
      * @param context   Current Context
@@ -415,7 +415,7 @@ public class Encryptor {
 
     /**
      * Generate a {@link Cipher} to be used with the
-     * {@link Encryptor#encryptLargeData(String, String, Context)} when
+     * {@link MEncryptor#encryptLargeData(String, String, Context)} when
      * called from SDK < 23.
      * @param alias unique identifier tight to secret key.
      * @param context current Context.
@@ -446,8 +446,8 @@ public class Encryptor {
 
     /**
      * Load or generate a Bouncy Castle secret key. If the key was already wrapped,
-     * it is loaded with {@link KeyWrapper#loadWrappedKey(Context, PrivateKey)},
-     * otherwise it is generated and wrapped with {@link Encryptor#generateBCSecretKey(String, Context)}
+     * it is loaded with {@link MKeyWrapper#loadWrappedKey(Context, PrivateKey)},
+     * otherwise it is generated and wrapped with {@link MEncryptor#generateBCSecretKey(String, Context)}
      * @param alias unique identifier tight to the secret key.
      * @param context current Context.
      * @return a Bouncy Castle secret key.
@@ -469,7 +469,7 @@ public class Encryptor {
             IllegalBlockSizeException
     {
 
-        KeyWrapper keyWrapper = new KeyWrapper();
+        MKeyWrapper keyWrapper = new MKeyWrapper();
 
         KeyPair pair = getKeyPair( alias, context );
         // load Key
@@ -484,7 +484,7 @@ public class Encryptor {
 
     /**
      * Generate a Bouncy Castle AES secret key and wraps it
-     * using {@link KeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)}.
+     * using {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)}.
      * @param alias unique identifier tight with standard secret key.
      * @param context current Context
      * @return a Bouncy Castle secret key.
@@ -511,7 +511,7 @@ public class Encryptor {
         SecretKey secretKey = generator.generateKey();
 
         // wrap and store key
-        KeyWrapper keyWrapper = new KeyWrapper();
+        MKeyWrapper keyWrapper = new MKeyWrapper();
         keyWrapper.wrapAndStoreKey( context, secretKey,
                 getKeyPair( alias, context ).getPublic() );
 

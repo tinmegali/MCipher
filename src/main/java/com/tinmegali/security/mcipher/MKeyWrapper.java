@@ -9,7 +9,6 @@ import com.tinmegali.security.mcipher.exceptions.KeyWrapperException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -30,7 +29,7 @@ import javax.crypto.SecretKey;
  */
 
 @SuppressWarnings("JavaDoc")
-class KeyWrapper {
+class MKeyWrapper {
 
     /**
      * Wraps and stores a {@link SecretKey}. The 'keyToWrap' is
@@ -47,8 +46,8 @@ class KeyWrapper {
      * @throws KeyStoreException
      * @throws NoSuchProviderException
      * @throws InvalidAlgorithmParameterException
-     * @see KeyWrapper#wrapKey(Key, Key)
-     * @see KeyWrapper#storeKey(Context, String)
+     * @see MKeyWrapper#wrapKey(Key, Key)
+     * @see MKeyWrapper#storeKey(Context, String)
      */
     void wrapAndStoreKey(
             Context context, SecretKey keyToWrap, PublicKey keyToWrapWith
@@ -66,7 +65,7 @@ class KeyWrapper {
      * Store a encrypted secret key ('wrappedKey') in the Shared Preferences.
      * @param context current Context.
      * @param wrappedKey encrypted Bouncy Castle secret key.
-     * @see KeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)
+     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)
      * @see Constants#PREFS_NAME
      * @see Constants#WRAPPED_KEY
      */
@@ -91,7 +90,7 @@ class KeyWrapper {
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws IllegalBlockSizeException
-     * @see KeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)
+     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)
      */
     private String wrapKey(Key keyToWrap, Key keyToWrapWith )
             throws InvalidKeyException, NoSuchPaddingException,
@@ -109,7 +108,7 @@ class KeyWrapper {
     /**
      * Loads from Shared Preferences
      * a {@link SecretKey} that was already 'wrapped' and 'stored'
-     * with method {@link KeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)}.
+     * with method {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)}.
      * If the key isn't found, throws a {@link KeyWrapperException}.
      * @param context current Context.
      * @param privateKey the {@link PrivateKey} to be used in the decryption.
@@ -122,7 +121,7 @@ class KeyWrapper {
      * @throws InvalidKeyException
      * @throws NoSuchPaddingException
      * @throws KeyWrapperException
-     * @see KeyWrapper#unWrapKey(String, Key)
+     * @see MKeyWrapper#unWrapKey(String, Key)
      */
     SecretKey loadWrappedKey(
             Context context, PrivateKey privateKey
@@ -153,13 +152,13 @@ class KeyWrapper {
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeyException
-     * @see CipherUtils#decode(String)
-     * @see KeyWrapper#loadWrappedKey(Context, PrivateKey)
+     * @see MCipherUtils#decode(String)
+     * @see MKeyWrapper#loadWrappedKey(Context, PrivateKey)
      */
     private Key unWrapKey(String wrappedKey, Key keyToUnWrap )
             throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException
     {
-        byte[] encryptedData = CipherUtils.decode( wrappedKey );
+        byte[] encryptedData = MCipherUtils.decode( wrappedKey );
 
         Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
         cipher.init( Cipher.UNWRAP_MODE, keyToUnWrap );

@@ -13,7 +13,7 @@ import android.util.Base64;
  * ___________________________________
  */
 
-public class CipherUtils {
+public class MCipherUtils {
 
     /**
      * Utility method to encode a byte array to an String

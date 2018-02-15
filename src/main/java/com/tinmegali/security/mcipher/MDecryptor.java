@@ -33,17 +33,17 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 /**
- * Utility Class to Decrypt a byte[] that was encrypted with {@link Encryptor}.
+ * Utility Class to Decrypt a byte[] that was encrypted with {@link MEncryptor}.
  */
 
 @SuppressWarnings("JavaDoc")
-public class Decryptor {
+public class MDecryptor {
 
-    private static final String TAG = Decryptor.class.getSimpleName();
+    private static final String TAG = MDecryptor.class.getSimpleName();
 
     private KeyStore keyStore;
 
-    public Decryptor() throws DecryptorException
+    public MDecryptor() throws DecryptorException
     {
         try {
             initKeyStore();
@@ -85,7 +85,7 @@ public class Decryptor {
      * @param encryptedData a byte array with the encrypted data. If the
      *                      encryption process used the AES algorithm,
      *                      the data must contain the Vector IV. In fact,
-     *                      the encrypted data must by a serializable {@link EncryptedObject},
+     *                      the encrypted data must by a serializable {@link MEncryptedObject},
      *                      containing the vector iv information.
      * @return a decrypted String.
      * @throws DecryptorException   wraps all possible exception for the decryption
@@ -97,13 +97,13 @@ public class Decryptor {
     {
         Log.i(TAG, "decrypt");
         try {
-            EncryptedObject encryptedObject =
-                    EncryptedObject.getEncryptedObject( encryptedData );
+            MEncryptedObject encryptedObject =
+                    MEncryptedObject.getEncryptedObject( encryptedData );
 
             // notice that CipherIV will be null for API 18 < 23
             final Cipher cipher = getCipher(alias, encryptedObject.getCypherIV());
             byte[] decryptedData = decryptData( encryptedObject.getData(), cipher);
-            return CipherUtils.encodeToStr( decryptedData );
+            return MCipherUtils.encodeToStr( decryptedData );
         }
         catch ( NoSuchProviderException | UnrecoverableEntryException | KeyStoreException
                 | NoSuchAlgorithmException | InvalidKeyException
@@ -123,11 +123,11 @@ public class Decryptor {
     /**
      * Uses AES algorithm to decrypt large chunks of data. If the method
      * is called from SDK 23+, it will make a standard decryption operation,
-     * calling {@link Decryptor#decrypt(String, byte[])}. If the method
+     * calling {@link MDecryptor#decrypt(String, byte[])}. If the method
      * id called from SDK < 23, it will make the decryption using
      * an AES algorithm, from the Bouncy Castle provider calling
-     * {@link Decryptor#wrapperCipher(String, Context)} to get the cipher and
-     * then calling {@link Decryptor#decryptData(byte[], Cipher)} providing the cipher.
+     * {@link MDecryptor#wrapperCipher(String, Context)} to get the cipher and
+     * then calling {@link MDecryptor#decryptData(byte[], Cipher)} providing the cipher.
      * @param alias unique identifier to get/generate the standard SecretKey
      * @param encryptedData encrypted data
      * @param context current Context.
@@ -144,7 +144,7 @@ public class Decryptor {
 
             if ( Build.VERSION.SDK_INT >= 23 ) {
                 String result = decrypt( alias, encryptedData );
-                return CipherUtils.decode( result );
+                return MCipherUtils.decode( result );
             } else {
 
                 Cipher cipher = wrapperCipher(alias, context);
@@ -244,7 +244,7 @@ public class Decryptor {
      * with the given 'alias'.
      *
      * This method is the API's standard for decryption for Android SDK 23+.
-     * For SDK < 23, use {@link Decryptor#getKeyPair(String)}.
+     * For SDK < 23, use {@link MDecryptor#getKeyPair(String)}.
      *
      * @param alias a unique id that was used to save the SecretKey in the KeyStore.
      * @return  s SecretKey to be used in the decryption process.
@@ -272,7 +272,7 @@ public class Decryptor {
      * for encryption and {@link KeyPair#getPrivate()} for decryption.
      *
      * This method is the API's standard for decryption for Android SDK < 23.
-     * For SDK 23+, use {@link Decryptor#getSecretKey(String)}.
+     * For SDK 23+, use {@link MDecryptor#getSecretKey(String)}.
      *
      * @param alias a unique id that was used to save the SecretKey in the KeyStore.
      * @return  a KeyPair containing a public and a secret key.
@@ -303,7 +303,7 @@ public class Decryptor {
 
     /**
      * Generate a {@link Cipher} to be used with the
-     * {@link Decryptor#decryptLargeData(String, byte[], Context)} when
+     * {@link MDecryptor#decryptLargeData(String, byte[], Context)} when
      * called from SDK < 23.
      * @param alias unique identifier tight to secret key.
      * @param context current Context.
@@ -336,7 +336,7 @@ public class Decryptor {
 
     /**
      * Load a generated a Bouncy Castle secret key with
-     * {@link KeyWrapper#loadWrappedKey(Context, PrivateKey)}.
+     * {@link MKeyWrapper#loadWrappedKey(Context, PrivateKey)}.
      * If the key wasn't already generated and stored, it will throw
      * a {@link KeyWrapperException}.
      * @param alias unique identifier tight to standard secret key.
@@ -362,7 +362,7 @@ public class Decryptor {
             IllegalBlockSizeException, DecryptorException, KeyWrapperException
     {
 
-        KeyWrapper keyWrapper = new KeyWrapper();
+        MKeyWrapper keyWrapper = new MKeyWrapper();
 
         KeyPair pair = getKeyPair( alias );
 
