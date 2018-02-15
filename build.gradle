@@ -1,0 +1,90 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 27
+
+
+
+    defaultConfig {
+        minSdkVersion 19
+        targetSdkVersion 27
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation 'com.android.support:appcompat-v7:27.0.2'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.1'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+}
+
+// path to Assets folder of the Unity Project
+String unityAssetsDir = "${rootDir.getPath()}/../../../unity/UnityPlugins/UnityPlugins/Assets/"
+
+// path to the specific directory inside the Assets folder
+String unityTargetDir = unityAssetsDir + "Plugins/Android/"
+
+// how to call the tasks group on the Gradle View
+String taskGroupName = "plugins"
+
+// the current build type, right now it has no difference: debug release
+String buildType = "debug"
+
+
+/***** .JAR *****/
+
+task exportJAR(dependsOn: "assemble" + buildType.capitalize(), type: Copy, group: taskGroupName) {
+
+    // where the .jar file is located when we build the module
+    String sourceDir = "${buildDir.getPath()}/intermediates/bundles/" + buildType + "/"
+
+    // how the .jar file is called when we build the module
+    String sourceFilename = "classes.jar"
+
+    // how we want to call the .jar file when importing into Unity
+    String targetFilename = "com.tinmegali.android.-${project.name}.jar"
+
+    // copy the .jar file into the Unity folder
+    // include the .jar file and rename it
+    from(sourceDir)
+    into(unityTargetDir)
+    include(sourceFilename)
+    rename(sourceFilename, targetFilename)
+}
+
+
+/***** .AAR *****/
+
+task exportAAR(dependsOn: "assemble" + buildType.capitalize(), type: Copy, group: taskGroupName) {
+
+    // where the .aar file is located when we build the module
+    String sourceDir = "${buildDir.getPath()}/outputs/aar/"
+
+    // how the .aar file is called when we build the module
+    String sourceFilename = "${project.name}-" + buildType + ".aar"
+
+    // how we want to call the .aar file when importing into Unity
+    String targetFilename = "com.tinmegali.android.-${project.name}.aar"
+
+    // copy the .aar file into the Unity folder
+    // include the .aar file and rename it
+    from(sourceDir)
+    into(unityTargetDir)
+    include(sourceFilename)
+    rename(sourceFilename, targetFilename)
+}
