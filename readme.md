@@ -5,6 +5,22 @@
 - Recommended to **SDK 23+**.
 - VERSION 0.1
 
+## Installing
+Don't forget to point to *`jcenter`* distribution center.
+###### Maven
+```xml
+<dependency>
+    <groupId>com.tinmegali.android</groupId>
+    <artifactId>mcipher</artifactId>
+    <version>0.2</version>
+    <type>pom</type>
+</dependency>
+```
+###### Gradle
+```
+compile 'com.tinmegali.android:mcipher:0.2'
+```
+
 ## Encrypting data
 1. Instantiate and Initialize a `MEncryptor.class`.
 2. Choose a unique identifier to be used as your Secret Key alias.
@@ -102,7 +118,7 @@ private void decryptData( byte[] encryptedData ) {
 ## TODO
 - [ ] Publish a working sample.
 - [x] Explain how to use the library.
-- [ ] Provide link to download from jCenter.
-- [ ] Automatically check the size of the encryption data, using `encryptLarge` only when necessary.
+- [x] Provide link to download from jCenter.
+- [x] Automatically check the size of the encryption data, using `encryptLarge` only when necessary.
 - [ ] Use random property while generating the Key.
 - [ ] Give the possibility to customize the algorithm, provider and transformation.
