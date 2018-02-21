@@ -68,7 +68,6 @@ public class KeyWrapperTests extends MCipherTestsBase {
         Key wrapperKey = getDecryptionWrapperKey();
         assertNotNull( "UnWrapper Key NULL", wrapperKey );
 
-        // FIXME use MCipherUtils to decode and encode
         byte[] wrappedData = Base64.decode( wrapped, Base64.DEFAULT );
 
         Key unwrapped = wrapper.unWrapKey( wrappedData, wrapperKey );
@@ -102,7 +101,6 @@ public class KeyWrapperTests extends MCipherTestsBase {
         byte[] wrapped = wrapper.wrapKey( bcKey, wrapperKey );
         assertNotNull( "Wrapped Key null", wrapped );
 
-        // FIXME use MCipherUtils to decode and encode
         return Base64.encodeToString( wrapped, Base64.DEFAULT );
     }
 

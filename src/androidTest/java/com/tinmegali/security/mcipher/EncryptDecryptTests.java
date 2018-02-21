@@ -1,6 +1,7 @@
 package com.tinmegali.security.mcipher;
 
 import android.content.Context;
+import android.os.Build;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 
@@ -10,6 +11,8 @@ import com.tinmegali.security.mcipher.exceptions.EncryptorException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 import static org.junit.Assert.*;
 
@@ -21,12 +24,10 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class EncryptDecryptTests {
 
-    final String ALIAS_STANDARD_DATA    = "com.tinmegali.security.cipher.standard";
-    final String ALIAS_LARGE_DATA       = "com.tinmegali.security.cipher.large";
     final String s1 = "a string";
     final String s2 = "kahsdkjhakjsdhakjshdkjahdkjahskjdhaskjdhakjsdhaskdh";
     final String s3 = "kahsdkjhakjsdhakjshdk jahdkjahsk jdhaskjdhakjsdhaskdslks lkdlkjfkjfkgjdkfhgkjdhfkgjhdkfjghkdfjhgkjhieuhriuehi ehrgiuehrighergh";
-    final String s4 = s3 + s3 + s3 + s3;
+    final String sLarge = s3 + s3 + s3 + s3;
     Context appContext;
     MEncryptor enc;
     MDecryptor dec;
@@ -44,16 +45,18 @@ public class EncryptDecryptTests {
         encryptDecryptStr(s1 );
         encryptDecryptStr(s2);
         encryptDecryptStr(s3);
-        encryptDecryptStr(s4);
+        if (Build.VERSION.SDK_INT >= 23) {
+            encryptDecryptStr( sLarge );
+        }
 
     }
 
     private void encryptDecryptStr(String s)
-            throws EncryptorException, DecryptorException {
+            throws EncryptorException, DecryptorException, IOException, ClassNotFoundException {
         byte[] encrypted = enc.encrypt( s, appContext );
         assertNotNull( encrypted );
 
-        byte[] decrypted = dec.decrypt( encrypted );
+        byte[] decrypted = dec.decrypt( encrypted, appContext );
         String decryptedStr = MCipherUtils.encodeToStr( decrypted );
         assertNotNull( decrypted );
         assertTrue( String.format("%s\n%s",s,decryptedStr), s.equals( decryptedStr ) );
@@ -64,19 +67,21 @@ public class EncryptDecryptTests {
         encryptDecyptLarge( s1 );
         encryptDecyptLarge( s2 );
         encryptDecyptLarge( s3 );
-        encryptDecyptLarge( s4 );
+        encryptDecyptLarge(sLarge);
     }
 
     private void encryptDecyptLarge( String s)
-            throws EncryptorException, DecryptorException
-    {
+            throws EncryptorException, DecryptorException, IOException, ClassNotFoundException {
         byte[] encrypted = enc.encryptLargeData( s, appContext );
         assertNotNull( encrypted );
+        MEncryptedObject encObj = MEncryptedObject.getEncryptedObject( encrypted );
+        assertNotNull( encObj.getData() );
+        assertNotNull( encObj.getCypherIV() );
 
         byte[] decrypted = dec.decryptLargeData( encrypted, appContext );
         assertNotNull( decrypted );
-
-        String decryptedS = MCipherUtils.encodeToStr( decrypted );
-        assertTrue( String.format("%s\n%s",s,decryptedS), s.equals( decryptedS ) );
+        String resultStr = MCipherUtils.encodeToStr( decrypted );
+        assertNotNull( resultStr );
+        assertTrue( String.format("%s\n%s",s,resultStr), s.equals( resultStr ) );
     }
 }

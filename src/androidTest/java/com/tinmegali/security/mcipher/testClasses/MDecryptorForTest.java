@@ -49,8 +49,8 @@ public class MDecryptorForTest extends MDecryptor {
 
     @NonNull
     @Override
-    public byte[] decrypt(byte[] encryptedData) throws DecryptorException {
-        return super.decrypt(encryptedData);
+    public byte[] decrypt(@NonNull byte[] encryptedData, @Nullable Context context) throws DecryptorException {
+        return super.decrypt(encryptedData, context);
     }
 
     @NonNull

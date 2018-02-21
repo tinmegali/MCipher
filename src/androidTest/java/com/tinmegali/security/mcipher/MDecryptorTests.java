@@ -13,9 +13,11 @@ import org.junit.runner.RunWith;
 
 import java.security.KeyPair;
 import java.security.Provider;
+import java.util.Arrays;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 import static org.junit.Assert.*;
 
@@ -104,39 +106,60 @@ public class MDecryptorTests extends MCipherTestsBase {
             assertNull( cipher.getIV() );
         } else {
             assertNotNull( cipher.getIV() );
-            // TODO verify if vectorIV must match
-//            assertEquals( "VectorIV doesn't match", cipher.getIV(), obj.getCypherIV() );
+            assertTrue( "VectorIV doesn't match",
+                    Arrays.equals( cipher.getIV(), obj.getCypherIV() ));
         }
     }
 
     @Test
     public void decrypt() throws Exception {
 
-        byte[] d1 = dec.decrypt( e1 );
-        assertDecryption( d1, s1 );
+        byte[] d1 = dec.decrypt(e1, appContext);
+        assertDecryption(d1, s1);
 
-        byte[] d2 = dec.decrypt( e2 );
-        assertDecryption( d2, s2 );
+        byte[] d2 = dec.decrypt(e2, appContext);
+        assertDecryption(d2, s2);
 
-        byte[] d3 = dec.decrypt( e3 );
-        assertDecryption( d3, s3 );
+        byte[] d3 = dec.decrypt(e3, appContext);
+        assertDecryption(d3, s3);
 
-        if ( Build.VERSION.SDK_INT >= 23 ) {
-            byte[] d4 = dec.decrypt( e4 );
-            assertDecryption( d4, s4 );
-        }
+        byte[] d4 = dec.decrypt(e4, appContext);
+        assertDecryption(d4, s4);
 
     }
 
     @Test
     public void decryptLarge() throws Exception {
-        // FIXME error on API 19
-        // BadPaddingException
-        //      javax.crypto.BadPaddingException: mac check in GCM failed
         deleteSavedKeys();
-        e4 = enc.encryptLargeData( s4, appContext );
-        byte[] d4 = dec.decryptLargeData( e4, appContext );
-        assertDecryption( d4, s4 );
+
+        byte[] encryptedObj = enc.encryptLargeData( s4, appContext );
+        assertNotNull( encryptedObj );
+        byte[] decryptedObj = dec.decryptLargeData( encryptedObj, appContext );
+        assertNotNull( decryptedObj );
+
+    }
+
+    @Test
+    public void decryptLargeSteps() throws Exception {
+        deleteSavedKeys();
+
+        byte[] encryptedObj = enc.encryptLargeData( s4, appContext );
+
+        assertNotNull( encryptedObj );
+
+        MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedObj );
+        assertNotNull( obj.getData() );
+        assertNotNull( obj.getCypherIV() );
+
+        Cipher cipherDec = Cipher.getInstance( Constants.TRANSFORMATION_BC );
+        SecretKey bcKey = dec.getUnwrappedBCKey( Constants.ALIAS_LARGE_DATA, appContext );
+        IvParameterSpec specs = new IvParameterSpec( obj.getCypherIV() );
+        cipherDec.init( Cipher.DECRYPT_MODE, bcKey, specs );
+        assertNotNull( cipherDec );
+        assertTrue( Arrays.equals( cipherDec.getIV(), obj.getCypherIV() ) );
+
+        byte[] decrypted = cipherDec.doFinal( obj.getData() );
+        assertNotNull( decrypted );
     }
 
     private void assertDecryption(byte[] decrypted, String original) {

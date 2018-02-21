@@ -179,9 +179,7 @@ public class MKeyWrapper {
         String algorithm;
         if (Build.VERSION.SDK_INT <23 ) {
             algorithm = "RSA";
-//            algorithm = Constants.TRANSFORMATION;
             cipher.init( Cipher.UNWRAP_MODE, keyToUnWrap );
-            // FIXME it doesn't work with api < 23
             return cipher.unwrap( obj.getData(), algorithm, Cipher.SECRET_KEY );
         }
         else {

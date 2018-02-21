@@ -20,6 +20,7 @@ class MEncryptedObject implements Serializable {
 
     private final byte[] data;
     private byte[] cypherIV;
+    private boolean isLarge = false;
 
 
     private MEncryptedObject(byte[] data) {
@@ -31,6 +32,20 @@ class MEncryptedObject implements Serializable {
         this.cypherIV = cypherIV;
     }
 
+    public MEncryptedObject(byte[] data, byte[] cypherIV, boolean isLarge) {
+        this.data = data;
+        this.cypherIV = cypherIV;
+        this.isLarge = isLarge;
+    }
+
+    public boolean isLarge() {
+        return isLarge;
+    }
+
+    private void setLarge(boolean large) {
+        isLarge = large;
+    }
+
     public byte[] getData() {
         return data;
     }
@@ -39,7 +54,7 @@ class MEncryptedObject implements Serializable {
         return cypherIV;
     }
 
-    static byte[] serializeEncryptedObj(byte[] encryptedData)
+     static byte[] serializeEncryptedObj(byte[] encryptedData)
             throws IOException {
         MEncryptedObject obj = new MEncryptedObject(encryptedData);
         try (
@@ -53,10 +68,24 @@ class MEncryptedObject implements Serializable {
 
     // Append Cipher's IV with the Encrypted Data
     // using a EncryptedData object
-    static byte[] serializeEncryptedObj(byte[] encryptedData, byte[] cypherIV)
+     static byte[] serializeEncryptedObj(byte[] encryptedData, byte[] cypherIV)
             throws IOException
     {
         MEncryptedObject data = new MEncryptedObject(encryptedData, cypherIV);
+        try (
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                ObjectOutputStream objOut = new ObjectOutputStream(out)
+        ) {
+
+            objOut.writeObject(data);
+            return out.toByteArray();
+        }
+    }
+
+    static byte[] serializeLargeEncryptedObj(byte[] encryptedData, byte[] cypherIV)
+            throws IOException
+    {
+        MEncryptedObject data = new MEncryptedObject(encryptedData, cypherIV, true);
         try (
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 ObjectOutputStream objOut = new ObjectOutputStream(out)

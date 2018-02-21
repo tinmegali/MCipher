@@ -105,18 +105,25 @@ public class MEncryptor {
             @NonNull final String textToEncrypt,
             @Nullable final Context context )
             throws EncryptorException {
-        Log.i(TAG, String.format("encrypt( %s )", textToEncrypt ));
+        Log.i(TAG, String.format("encrypt( %s )", textToEncrypt));
+        byte[] decoded = MCipherUtils.decode(textToEncrypt);
+
+        return encrypt(decoded, context);
+    }
+
+    public byte[] encrypt(
+            @NonNull final byte[] dataToEncrypt,
+            @Nullable final Context context )
+            throws EncryptorException {
         try
         {
-            byte[] decoded = MCipherUtils.decode( textToEncrypt );
-
             // call 'encryptLargeData' for big block sizes
             // called from older SDKs
-            if ( Build.VERSION.SDK_INT < 23 && decoded.length >= 200 ) {
+            if ( Build.VERSION.SDK_INT < 23 && dataToEncrypt.length >= (256-11) ) {
                 String warnMsg = String.format(
                         "Block size [%s] to large for standard 'RSA' encryption," +
                                 "using 'AES'. Try to call 'encryptLargeData()' the next time",
-                        decoded.length
+                        dataToEncrypt.length
                 );
                 Log.w( TAG, warnMsg );
                 if ( context == null )
@@ -125,7 +132,7 @@ public class MEncryptor {
                             "older SDKs (SDK < 23).";
                     throw new EncryptorException( msg );
                 }
-                return encryptLargeData( textToEncrypt, context );
+                return encryptLargeData( dataToEncrypt, context );
             }
 
             // get the appropriate cipher for the current SDK
@@ -135,7 +142,7 @@ public class MEncryptor {
 
 //            Log.i(TAG, String.format("Encrypted: %n\t%s", encryptedStr ));
 
-            return encrypting( decoded, cipher );
+            return encrypting( dataToEncrypt, cipher );
 
         }
         catch (UnrecoverableEntryException | NoSuchAlgorithmException
@@ -196,7 +203,38 @@ public class MEncryptor {
                     "Something went wrong while trying to encrypt." +
                             "%n\tException: [%s]" +
                             "%n\tCause: %s",
-                    e.getClass().getSimpleName(), e.getCause() );
+                    e.getClass().getSimpleName(), e );
+            throw new EncryptorException( errorMsg, e );
+        }
+
+
+    }
+
+    public byte[] encryptLargeData(
+            @NonNull final byte[] dataToEncrypt,
+            @NonNull final Context context
+    ) throws EncryptorException {
+
+        try {
+            if ( Build.VERSION.SDK_INT >= 23 ) {
+                return encrypt( dataToEncrypt, context );
+            } else {
+                byte[] iv = MCipherUtils.generateIV();
+                Cipher cipher = cipherLargeData( ALIAS_LARGE, context, iv );
+                return encryptingLarge(  dataToEncrypt , cipher, iv );
+            }
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException
+                | InvalidAlgorithmParameterException | InvalidKeyException
+                | NoSuchProviderException | KeyStoreException
+                | IllegalBlockSizeException | UnrecoverableEntryException
+                | IOException | SignatureException | ClassNotFoundException
+                | BadPaddingException e)
+        {
+            String errorMsg = String.format(
+                    "Something went wrong while trying to encrypt." +
+                            "%n\tException: [%s]" +
+                            "%n\tCause: %s",
+                    e.getClass().getSimpleName(), e );
             throw new EncryptorException( errorMsg, e );
         }
 
@@ -257,7 +295,7 @@ public class MEncryptor {
         // Add the cipher IV at the encrypted data
         byte[] encryptedData = cipher.doFinal( toEncrypt );
 
-        return MEncryptedObject.serializeEncryptedObj( encryptedData, iv );
+        return MEncryptedObject.serializeLargeEncryptedObj( encryptedData, iv );
     }
 
     /**
@@ -327,7 +365,6 @@ public class MEncryptor {
             UnrecoverableKeyException
     {
         // tries to recover SecretKey from KeyStore
-        // FIXME check is key is the correct type, otherwise, generate a new one
         Key key = keyStore.getKey(alias, null);
         if (key == null) {
             return generateSecretKey(alias);
@@ -495,6 +532,12 @@ public class MEncryptor {
         IvParameterSpec spec = new IvParameterSpec( iv );
 //        GCMParameterSpec spec = new GCMParameterSpec(128, iv);
         cipher.init( Cipher.ENCRYPT_MODE, bcKey, spec  );
+
+//        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC );
+//        // getting Bouncy Castle Secret Key
+//        SecretKey bcKey = getBCSecretKey( alias, context );
+//
+//        cipher.init( Cipher.ENCRYPT_MODE, bcKey );
         return cipher;
     }
 

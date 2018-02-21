@@ -93,13 +93,18 @@ public class MDecryptor {
      * process. To access the original exception call {@link DecryptorException#getCause()}.
      */
     @NonNull
-    public byte[] decrypt(final byte[] encryptedData )
+    public byte[] decrypt(
+            @NonNull final byte[] encryptedData,
+            @Nullable final Context context
+    )
             throws DecryptorException
     {
         Log.i(TAG, "decrypt");
         try {
             MEncryptedObject encryptedObject =
                     MEncryptedObject.getEncryptedObject( encryptedData );
+
+            if ( encryptedObject.isLarge() ) return decryptLargeData( encryptedData, context );
 
             // notice that CipherIV will be null for API 18 < 23
             final Cipher cipher = getCipher(ALIAS_STANDARD, encryptedObject.getCypherIV());
@@ -112,10 +117,10 @@ public class MDecryptor {
                 | BadPaddingException
                 | IllegalBlockSizeException | IOException | ClassNotFoundException e) {
             String errorMsg = String.format(
-                    "And error occurred while decrypting data." +
+                    "An error occurred while decrypting data." +
                             "%n\t Exception: [%s]" +
                             "%n\t Cause: %s",
-                    e.getClass().getSimpleName(), e.getCause());
+                    e.getClass().getSimpleName(), e );
             Log.e(TAG, errorMsg);
             throw new DecryptorException( errorMsg, e );
         }
@@ -124,7 +129,7 @@ public class MDecryptor {
     /**
      * Uses AES algorithm to decrypt large chunks of data. If the method
      * is called from SDK 23+, it will make a standard decryption operation,
-     * calling {@link MDecryptor#decrypt(byte[])}. If the method
+     * calling {@link MDecryptor#decrypt(byte[], Context)}. If the method
      * id called from SDK < 23, it will make the decryption using
      * an AES algorithm, from the Bouncy Castle provider calling
      * {@link MDecryptor#wrapperCipher(String, Context, byte[])} to get the cipher and
@@ -139,14 +144,16 @@ public class MDecryptor {
             final byte[] encryptedData,
             final Context context
     ) throws DecryptorException {
+        byte[] decrypted;
         try {
             if ( Build.VERSION.SDK_INT >= 23 ) {
-                return decrypt( encryptedData );
+                decrypted = decrypt( encryptedData, context );
             } else {
                 MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedData );
                 Cipher cipher = wrapperCipher(ALIAS_LARGE, context, obj.getCypherIV());
-                return decryptData(encryptedData, cipher);
+                decrypted = decryptData( obj.getData(), cipher );
             }
+            return decrypted;
 
         } catch (NoSuchPaddingException | NoSuchAlgorithmException
                 | UnrecoverableEntryException | InvalidKeyException
@@ -160,7 +167,7 @@ public class MDecryptor {
                     "And error occurred while decrypting data." +
                             "%n\t Exception: [%s]" +
                             "%n\t Cause: %s",
-                    e.getClass().getSimpleName(), e.getCause());
+                    e.getClass().getSimpleName(), e);
             Log.e(TAG, errorMsg);
             throw new DecryptorException( errorMsg, e );
         }
@@ -328,11 +335,16 @@ public class MDecryptor {
             KeyStoreException, IllegalBlockSizeException, DecryptorException,
             KeyWrapperException, IOException, ClassNotFoundException
     {
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC, "BC" );
+//        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC, "BC" );
+//        SecretKey bcKey = getUnwrappedBCKey( alias, context );
+//
+//        IvParameterSpec specs = new IvParameterSpec( cipherIV );
+//
+//        cipher.init( Cipher.DECRYPT_MODE, bcKey, specs );
+
+        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC);
         SecretKey bcKey = getUnwrappedBCKey( alias, context );
-
         IvParameterSpec specs = new IvParameterSpec( cipherIV );
-
         cipher.init( Cipher.DECRYPT_MODE, bcKey, specs );
         return cipher;
     }

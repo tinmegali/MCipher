@@ -13,6 +13,7 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.security.KeyPair;
+import java.util.Arrays;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -109,10 +110,6 @@ public class MEncryptorTests extends MCipherTestsBase {
         assertNotNull( key );
     }
 
-    // FIXME
-    // error API 23+: java.lang.ClassCastException: android.security.keystore.AndroidKeyStoreRSAPrivateKey
-    // cannot be cast to javax.crypto.SecretKey
-
     @Test
     public void getBCSecretKey() throws Exception {
         String alias;
@@ -135,8 +132,26 @@ public class MEncryptorTests extends MCipherTestsBase {
 
     @Test
     public void encryptLarge() throws Exception {
-        byte[] d4 = enc.encrypt( s4, appContext );
+        byte[] d4 = enc.encryptLargeData( s4, appContext );
         assertEncryption( d4 );
+
+        byte[] iv = MCipherUtils.generateIV();
+        assertNotNull( iv );
+        Cipher cipher = enc.cipherLargeData( Constants.ALIAS_LARGE_DATA, appContext, iv );
+        assertNotNull( cipher );
+
+        byte[] toEncrypt = MCipherUtils.decode( s4 );
+        byte[] encryptedData = cipher.doFinal( toEncrypt );
+
+        byte[] encryptedObj = MEncryptedObject.serializeEncryptedObj( encryptedData, iv );
+
+        assertNotNull( encryptedObj );
+
+        MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedObj );
+        assertNotNull( obj.getData() );
+        assertTrue( Arrays.equals( obj.getData(), encryptedData ));
+        assertNotNull( obj.getCypherIV() );
+        assertTrue( Arrays.equals( obj.getCypherIV(), iv ) );
     }
 
     @Test
@@ -150,7 +165,6 @@ public class MEncryptorTests extends MCipherTestsBase {
         byte[] d3 = enc.encrypt( s3, appContext );
         assertEncryption(d3);
 
-        // FIXME doesn't work API < 23. javax.crypto.BadPaddingException
         byte[] d4 = enc.encrypt( s4, appContext );
         assertEncryption(d4);
 
