@@ -2,17 +2,20 @@ package com.tinmegali.security.mcipher;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
+import android.support.annotation.NonNull;
 import android.util.Base64;
 
 import com.tinmegali.security.mcipher.exceptions.KeyWrapperException;
 
+import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.UnrecoverableKeyException;
 
@@ -20,6 +23,7 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 /**
  * Utility class to handle to handle the encryption/decryption and the storage
@@ -29,7 +33,7 @@ import javax.crypto.SecretKey;
  */
 
 @SuppressWarnings("JavaDoc")
-class MKeyWrapper {
+public class MKeyWrapper {
 
     /**
      * Wraps and stores a {@link SecretKey}. The 'keyToWrap' is
@@ -49,15 +53,18 @@ class MKeyWrapper {
      * @see MKeyWrapper#wrapKey(Key, Key)
      * @see MKeyWrapper#storeKey(Context, String)
      */
-    void wrapAndStoreKey(
-            Context context, SecretKey keyToWrap, PublicKey keyToWrapWith
+    protected void wrapAndStoreKey(
+            @NonNull Context context,
+            @NonNull SecretKey keyToWrap,
+            @NonNull Key keyToWrapWith
     ) throws InvalidKeyException, NoSuchPaddingException,
             NoSuchAlgorithmException, IllegalBlockSizeException,
             UnrecoverableKeyException, KeyStoreException,
-            NoSuchProviderException, InvalidAlgorithmParameterException
+            NoSuchProviderException, InvalidAlgorithmParameterException,
+            IOException
     {
-        String wrappedKey = wrapKey( keyToWrap, keyToWrapWith );
-
+        byte[] wrapped = wrapKey( keyToWrap, keyToWrapWith );
+        String wrappedKey = Base64.encodeToString( wrapped, Base64.DEFAULT );
         storeKey(context, wrappedKey);
     }
 
@@ -65,11 +72,11 @@ class MKeyWrapper {
      * Store a encrypted secret key ('wrappedKey') in the Shared Preferences.
      * @param context current Context.
      * @param wrappedKey encrypted Bouncy Castle secret key.
-     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)
+     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)
      * @see Constants#PREFS_NAME
      * @see Constants#WRAPPED_KEY
      */
-    private void storeKey(Context context, String wrappedKey) {
+    protected void storeKey(Context context, String wrappedKey) {
         SharedPreferences pref = context
                 .getSharedPreferences( Constants.PREFS_NAME,
                         Context.MODE_PRIVATE );
@@ -90,28 +97,29 @@ class MKeyWrapper {
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws IllegalBlockSizeException
-     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)
+     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)
      */
-    private String wrapKey(Key keyToWrap, Key keyToWrapWith )
+    protected byte[] wrapKey(
+            @NonNull final Key keyToWrap,
+            @NonNull final Key keyToWrapWith
+    )
             throws InvalidKeyException, NoSuchPaddingException,
-            NoSuchAlgorithmException, IllegalBlockSizeException
+            NoSuchAlgorithmException, IllegalBlockSizeException,IOException
     {
 
         Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
         cipher.init( Cipher.WRAP_MODE, keyToWrapWith );
 
-        byte[] encryptedKey = cipher.wrap( keyToWrap );
-
-        return Base64.encodeToString( encryptedKey, Base64.DEFAULT );
+        return MEncryptedObject.serializeEncryptedObj( cipher.wrap( keyToWrap ), cipher.getIV() );
     }
 
     /**
      * Loads from Shared Preferences
      * a {@link SecretKey} that was already 'wrapped' and 'stored'
-     * with method {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)}.
+     * with method {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)}.
      * If the key isn't found, throws a {@link KeyWrapperException}.
      * @param context current Context.
-     * @param privateKey the {@link PrivateKey} to be used in the decryption.
+     * @param wrapperKey the {@link Key} to be used in the decryption.
      * @return the saved key.
      * @throws UnrecoverableKeyException
      * @throws InvalidAlgorithmParameterException
@@ -121,14 +129,16 @@ class MKeyWrapper {
      * @throws InvalidKeyException
      * @throws NoSuchPaddingException
      * @throws KeyWrapperException
-     * @see MKeyWrapper#unWrapKey(String, Key)
+     * @see MKeyWrapper#unWrapKey(byte[], Key)
      */
-    SecretKey loadWrappedKey(
-            Context context, PrivateKey privateKey
+    protected SecretKey loadWrappedBCKey(
+            Context context, Key wrapperKey
     ) throws UnrecoverableKeyException,
             InvalidAlgorithmParameterException, NoSuchAlgorithmException,
             KeyStoreException, NoSuchProviderException, InvalidKeyException,
-            NoSuchPaddingException, KeyWrapperException {
+            NoSuchPaddingException, KeyWrapperException, IOException,
+            ClassNotFoundException
+    {
         SharedPreferences pref = context
                 .getSharedPreferences( Constants.PREFS_NAME,
                         Context.MODE_PRIVATE );
@@ -139,30 +149,49 @@ class MKeyWrapper {
             throw new KeyWrapperException( msg );
         }
 
-        return (SecretKey) unWrapKey( wrappedKey, privateKey );
+        byte[] wrappedData = Base64.decode( wrappedKey, Base64.DEFAULT );
+        return (SecretKey) unWrapKey( wrappedData, wrapperKey );
 
 
     }
 
     /**
      * Unwraps (decrypts) an encrypted {@link Key}.
-     * @param wrappedKey the encrypted key.
+     * @param wrappedObj the encrypted key.
      * @param keyToUnWrap the {@link Key} responsible to decrypt the key.
      * @return and decrypted {@link Key}.
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeyException
      * @see MCipherUtils#decode(String)
-     * @see MKeyWrapper#loadWrappedKey(Context, PrivateKey)
      */
-    private Key unWrapKey(String wrappedKey, Key keyToUnWrap )
-            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException
+    protected Key unWrapKey(
+            @NonNull byte[] wrappedObj,
+            @NonNull Key keyToUnWrap
+    )
+            throws NoSuchPaddingException, IOException, ClassNotFoundException,
+            NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException
     {
-        byte[] encryptedData = MCipherUtils.decode( wrappedKey );
+
+        MEncryptedObject obj = MEncryptedObject.getEncryptedObject( wrappedObj );
 
         Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
-        cipher.init( Cipher.UNWRAP_MODE, keyToUnWrap );
-        return cipher.unwrap( encryptedData, "RSA", Cipher.SECRET_KEY );
+        String algorithm;
+        if (Build.VERSION.SDK_INT <23 ) {
+            algorithm = "RSA";
+//            algorithm = Constants.TRANSFORMATION;
+            cipher.init( Cipher.UNWRAP_MODE, keyToUnWrap );
+            // FIXME it doesn't work with api < 23
+            return cipher.unwrap( obj.getData(), algorithm, Cipher.SECRET_KEY );
+        }
+        else {
+            algorithm = "AES";
+            final GCMParameterSpec specs = new GCMParameterSpec( 128, obj.getCypherIV() );
+            cipher.init( Cipher.UNWRAP_MODE, keyToUnWrap, specs );
+            return cipher.unwrap( obj.getData(), algorithm, Cipher.SECRET_KEY );
+        }
+
+
     }
 
 }

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -25,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.UnrecoverableKeyException;
@@ -38,6 +40,8 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.security.auth.x500.X500Principal;
 
 /**
@@ -49,6 +53,8 @@ public class MEncryptor {
 
     private final String TAG = MEncryptor.class.getSimpleName();
     private KeyStore keyStore;
+    protected String ALIAS_STANDARD = Constants.ALIAS_STANDARD_DATA;
+    protected String ALIAS_LARGE = Constants.ALIAS_LARGE_DATA;
 
     public MEncryptor() throws EncryptorException {
         try {
@@ -72,7 +78,7 @@ public class MEncryptor {
      * @throws IOException
      * @throws KeyStoreException
      */
-    private void initKeyStore()
+    protected void initKeyStore()
             throws CertificateException, NoSuchAlgorithmException,
             IOException, KeyStoreException
     {
@@ -87,9 +93,8 @@ public class MEncryptor {
      *
      * Notice that in SDK versions previous to 23, to encrypt big chunks of data
      * this method won't work. For those situations, use
-     * {@link MEncryptor#encryptLargeData(String, String, Context)}.
+     * {@link MEncryptor#encryptLargeData(String, Context)}.
      *
-     * @param alias         unique name used by to the SecretKey/SecretPair and Cipher
      * @param textToEncrypt String to encrypt. For API previous to 23, the text must be smaller
      *                      than 250 symbols.
      * @return  a serialized byte array of a {@link MEncryptedObject},
@@ -97,20 +102,40 @@ public class MEncryptor {
      * @throws EncryptorException   a wrapper {@link Exception}.
      */
     public byte[] encrypt(
-            @NonNull final String alias,
             @NonNull final String textToEncrypt,
             @Nullable final Context context )
             throws EncryptorException {
-        Log.i(TAG, String.format("encrypt( %s, %s )", alias, textToEncrypt ));
+        Log.i(TAG, String.format("encrypt( %s )", textToEncrypt ));
         try
         {
+            byte[] decoded = MCipherUtils.decode( textToEncrypt );
+
+            // call 'encryptLargeData' for big block sizes
+            // called from older SDKs
+            if ( Build.VERSION.SDK_INT < 23 && decoded.length >= 200 ) {
+                String warnMsg = String.format(
+                        "Block size [%s] to large for standard 'RSA' encryption," +
+                                "using 'AES'. Try to call 'encryptLargeData()' the next time",
+                        decoded.length
+                );
+                Log.w( TAG, warnMsg );
+                if ( context == null )
+                {
+                    String msg = "Context cannot be null when calling 'encrypting' from" +
+                            "older SDKs (SDK < 23).";
+                    throw new EncryptorException( msg );
+                }
+                return encryptLargeData( textToEncrypt, context );
+            }
+
             // get the appropriate cipher for the current SDK
-            Cipher cipher = cipherForEncrypt( alias, context );
+            Cipher cipher = cipherForEncrypt( ALIAS_STANDARD, context );
 
             // get an encrypted byte[], containing a IV vector if needed.
 
 //            Log.i(TAG, String.format("Encrypted: %n\t%s", encryptedStr ));
-            return encryptData( MCipherUtils.decode( textToEncrypt ), cipher );
+
+            return encrypting( decoded, cipher );
 
         }
         catch (UnrecoverableEntryException | NoSuchAlgorithmException
@@ -123,8 +148,11 @@ public class MEncryptor {
             String errorMsg = String.format(
                     "Something went wrong while trying to encrypt." +
                             "%n\tException: [%s]" +
+                            "%n\tMessage: %s" +
                             "%n\tCause: %s",
-                    e.getClass().getSimpleName(), e.getCause() );
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    e.getCause() );
             Log.e(TAG, errorMsg );
             throw new EncryptorException( errorMsg, e );
         }
@@ -133,36 +161,36 @@ public class MEncryptor {
     /**
      * Uses AES algorithm to encrypt large chunks of data. If the method
      * is called from SDK 23+, it will make a standard encryption operation,
-     * calling {@link MEncryptor#encrypt(String, String, Context)}. If the method
+     * calling {@link MEncryptor#encrypt(String, Context)}. If the method
      * id called from SDK < 23, it will make the encryption using
      * an AES algorithm, from the Bouncy Castle provider calling
-     * {@link MEncryptor#wrapperCipher(String, Context)} to get the cipher and
-     * then calling {@link MEncryptor#encryptData(byte[], Cipher)} providing the cipher.
+     * {@link MEncryptor#cipherLargeData(String, Context, byte[])}  to get the cipher and
+     * then calling {@link MEncryptor#encrypting(byte[], Cipher)} providing the cipher.
      *
-     * @param alias unique identifier to get/generate the standard SecretKey
      * @param dataToEncrypt data to encrypt
      * @param context current Context
      * @return an encrypted byte array of the data
      * @throws EncryptorException for any errors.
      */
     public byte[] encryptLargeData(
-            @NonNull final String alias,
             @NonNull final String dataToEncrypt,
             @NonNull final Context context
     ) throws EncryptorException {
 
         try {
             if ( Build.VERSION.SDK_INT >= 23 ) {
-                return encrypt( alias, dataToEncrypt, context);
+                return encrypt( dataToEncrypt, context );
             } else {
-                Cipher cipher = wrapperCipher( alias, context );
-                return encryptData(  MCipherUtils.decode(dataToEncrypt) , cipher );
+                byte[] iv = MCipherUtils.generateIV();
+                Cipher cipher = cipherLargeData( ALIAS_LARGE, context, iv );
+                return encryptingLarge(  MCipherUtils.decode( dataToEncrypt ) , cipher, iv );
             }
         } catch (NoSuchPaddingException | NoSuchAlgorithmException
                 | InvalidAlgorithmParameterException | InvalidKeyException
                 | NoSuchProviderException | KeyStoreException
                 | IllegalBlockSizeException | UnrecoverableEntryException
-                | IOException | SignatureException | BadPaddingException e)
+                | IOException | SignatureException | ClassNotFoundException
+                | BadPaddingException e)
         {
             String errorMsg = String.format(
                     "Something went wrong while trying to encrypt." +
@@ -202,13 +230,13 @@ public class MEncryptor {
      * @throws BadPaddingException
      * @throws IllegalBlockSizeException
      */
-    private byte[] encryptData(final byte[] toEncrypt, Cipher cipher )
+    protected byte[] encrypting(final byte[] toEncrypt, Cipher cipher )
             throws UnrecoverableEntryException, NoSuchAlgorithmException,
             KeyStoreException, NoSuchProviderException, NoSuchPaddingException,
             InvalidKeyException, IOException, InvalidAlgorithmParameterException,
             SignatureException, BadPaddingException, IllegalBlockSizeException
     {
-        // Log.i(TAG, String.format("encryptData( %s )", textToEncrypt ));
+        // Log.i(TAG, String.format("encrypting( %s )", textToEncrypt ));
 
         // Add the cipher IV at the encrypted data
         byte[] encryptedData = cipher.doFinal( toEncrypt );
@@ -218,6 +246,18 @@ public class MEncryptor {
         byte[] cipherIV = cipher.getIV();
 
         return MEncryptedObject.serializeEncryptedObj( encryptedData, cipherIV );
+    }
+
+    protected byte[] encryptingLarge(final byte[] toEncrypt, Cipher cipher, byte[] iv)
+            throws UnrecoverableEntryException, NoSuchAlgorithmException,
+            KeyStoreException, NoSuchProviderException, NoSuchPaddingException,
+            InvalidKeyException, IOException, InvalidAlgorithmParameterException,
+            SignatureException, BadPaddingException, IllegalBlockSizeException
+    {
+        // Add the cipher IV at the encrypted data
+        byte[] encryptedData = cipher.doFinal( toEncrypt );
+
+        return MEncryptedObject.serializeEncryptedObj( encryptedData, iv );
     }
 
     /**
@@ -235,7 +275,10 @@ public class MEncryptor {
      * @param context   current Context. It is only used for calls on API previous to 23.
      * @return  A {@link Cipher} appropriate only for encryption operations.
      */
-    private Cipher cipherForEncrypt(@NonNull final String alias, @Nullable Context context )
+    protected Cipher cipherForEncrypt(
+            @NonNull final String alias,
+            @Nullable Context context
+    ) throws EncryptorException
     {
         try {
             final Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
@@ -259,7 +302,7 @@ public class MEncryptor {
                 | InvalidKeyException | NoSuchProviderException | UnrecoverableKeyException
                 | InvalidAlgorithmParameterException | KeyStoreException e) {
             e.printStackTrace();
-            return null;
+            throw new EncryptorException("An error occurred during Cipher initialization.", e);
         }
     }
 
@@ -278,19 +321,22 @@ public class MEncryptor {
      * @throws UnrecoverableKeyException
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private SecretKey getSecretKey(String alias)
+    protected SecretKey getSecretKey(String alias)
             throws NoSuchAlgorithmException, NoSuchProviderException,
             InvalidAlgorithmParameterException, KeyStoreException,
             UnrecoverableKeyException
     {
         // tries to recover SecretKey from KeyStore
-        SecretKey key = (SecretKey) keyStore.getKey(alias, null);
-
+        // FIXME check is key is the correct type, otherwise, generate a new one
+        Key key = keyStore.getKey(alias, null);
         if (key == null) {
             return generateSecretKey(alias);
         }
+        else if( !(key instanceof SecretKey) ) {
+            return generateSecretKey(alias);
+        }
 
-        return key;
+        return (SecretKey) key;
     }
 
     /**
@@ -308,7 +354,7 @@ public class MEncryptor {
      * @throws InvalidAlgorithmParameterException
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private SecretKey generateSecretKey( String alias )
+    protected SecretKey generateSecretKey( String alias )
             throws NoSuchAlgorithmException, NoSuchProviderException,
             InvalidAlgorithmParameterException, KeyStoreException,
             UnrecoverableKeyException
@@ -345,7 +391,7 @@ public class MEncryptor {
      * @throws NoSuchProviderException
      * @throws InvalidAlgorithmParameterException
      */
-    private KeyPair getKeyPair(
+    protected KeyPair getKeyPair(
             @NonNull String alias, @NonNull Context context
     ) throws UnrecoverableKeyException, NoSuchAlgorithmException,
             KeyStoreException, NoSuchProviderException,
@@ -384,7 +430,7 @@ public class MEncryptor {
      * @throws NoSuchProviderException
      * @throws InvalidAlgorithmParameterException
      */
-    private KeyPair generateKeyPair( String alias, Context context )
+    protected KeyPair generateKeyPair( String alias, Context context )
             throws NoSuchAlgorithmException, NoSuchProviderException,
             InvalidAlgorithmParameterException {
 
@@ -415,7 +461,7 @@ public class MEncryptor {
 
     /**
      * Generate a {@link Cipher} to be used with the
-     * {@link MEncryptor#encryptLargeData(String, String, Context)} when
+     * {@link MEncryptor#encryptLargeData(String, Context)} when
      * called from SDK < 23.
      * @param alias unique identifier tight to secret key.
      * @param context current Context.
@@ -431,23 +477,32 @@ public class MEncryptor {
      * @throws KeyStoreException
      * @throws IllegalBlockSizeException
      */
-    private Cipher wrapperCipher(
+    protected Cipher cipherLargeData(
             @NonNull final String alias,
-            final @NonNull Context context )
+            final @NonNull Context context,
+            final byte[] iv
+    )
             throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidKeyException, UnrecoverableKeyException,
             InvalidAlgorithmParameterException, NoSuchProviderException,
-            KeyStoreException, IllegalBlockSizeException
+            KeyStoreException, IllegalBlockSizeException, IOException,
+            ClassNotFoundException
     {
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC );
-        cipher.init( Cipher.ENCRYPT_MODE, getBCSecretKey( alias, context ) );
+        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC, "BC" );
+        // getting Bouncy Castle Secret Key
+        SecretKey bcKey = getBCSecretKey( alias, context );
+
+        IvParameterSpec spec = new IvParameterSpec( iv );
+//        GCMParameterSpec spec = new GCMParameterSpec(128, iv);
+        cipher.init( Cipher.ENCRYPT_MODE, bcKey, spec  );
         return cipher;
     }
 
     /**
      * Load or generate a Bouncy Castle secret key. If the key was already wrapped,
-     * it is loaded with {@link MKeyWrapper#loadWrappedKey(Context, PrivateKey)},
-     * otherwise it is generated and wrapped with {@link MEncryptor#generateBCSecretKey(String, Context)}
+     * it is loaded with {@link MKeyWrapper#loadWrappedBCKey(Context, Key)},
+     * otherwise it is generated and wrapped with
+     * {@link MEncryptor#generateBCSecretKey(Context)}
      * @param alias unique identifier tight to the secret key.
      * @param context current Context.
      * @return a Bouncy Castle secret key.
@@ -460,32 +515,43 @@ public class MEncryptor {
      * @throws InvalidAlgorithmParameterException
      * @throws IllegalBlockSizeException
      */
-    private SecretKey getBCSecretKey(
-            @NonNull String alias, @NonNull Context context
+    protected SecretKey getBCSecretKey(
+            @NonNull final String alias,
+            @NonNull final Context context
     )
             throws NoSuchPaddingException, UnrecoverableKeyException,
             NoSuchAlgorithmException, KeyStoreException, InvalidKeyException,
             NoSuchProviderException, InvalidAlgorithmParameterException,
-            IllegalBlockSizeException
+            IllegalBlockSizeException, IOException, ClassNotFoundException
     {
 
         MKeyWrapper keyWrapper = new MKeyWrapper();
 
-        KeyPair pair = getKeyPair( alias, context );
-        // load Key
         try {
-            return keyWrapper
-                    .loadWrappedKey( context, pair.getPrivate() );
-        } catch (KeyWrapperException e)
-        {
-            return generateBCSecretKey( alias, context );
+            if (Build.VERSION.SDK_INT < 23) {
+                KeyPair pair = getKeyPair(alias, context);
+
+                // load Key
+                return keyWrapper
+                        .loadWrappedBCKey(context, pair.getPrivate());
+            }
+            else
+            {
+                // SDK 23+
+                SecretKey key = getSecretKey(alias);
+                return keyWrapper.loadWrappedBCKey(context, key);
+
+            }
+        } catch (KeyWrapperException e) {
+            SecretKey bcKey = generateBCSecretKey(context);
+            wrapAndStoreBCKey(context, bcKey);
+            return bcKey;
         }
     }
 
     /**
      * Generate a Bouncy Castle AES secret key and wraps it
-     * using {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, PublicKey)}.
-     * @param alias unique identifier tight with standard secret key.
+     * using {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)}.
      * @param context current Context
      * @return a Bouncy Castle secret key.
      * @throws NoSuchAlgorithmException
@@ -497,7 +563,9 @@ public class MEncryptor {
      * @throws InvalidKeyException
      * @throws IllegalBlockSizeException
      */
-    private SecretKey generateBCSecretKey( final String alias, final Context context)
+    protected SecretKey generateBCSecretKey(
+            final Context context
+    )
             throws NoSuchAlgorithmException, NoSuchProviderException, UnrecoverableKeyException,
             KeyStoreException, InvalidAlgorithmParameterException, NoSuchPaddingException,
             InvalidKeyException, IllegalBlockSizeException
@@ -505,18 +573,38 @@ public class MEncryptor {
         // Get a KeyGenerator using AES algorithm and
         // the BouncyCastle provider. This provider is around
         // in old SDKs, API 19+
-        KeyGenerator generator = KeyGenerator
-                .getInstance("AES", "BC");
+        KeyGenerator generator = KeyGenerator.getInstance("AES", "BC");
+        generator.init(128, new SecureRandom() );
 
-        SecretKey secretKey = generator.generateKey();
+        return generator.generateKey();
 
+    }
+
+    protected void wrapAndStoreBCKey(
+            Context context,
+            SecretKey bcKey
+    ) throws InvalidKeyException, NoSuchPaddingException,
+            NoSuchAlgorithmException, IllegalBlockSizeException,
+            UnrecoverableKeyException, KeyStoreException,
+            NoSuchProviderException, InvalidAlgorithmParameterException,
+            IOException
+    {
         // wrap and store key
         MKeyWrapper keyWrapper = new MKeyWrapper();
-        keyWrapper.wrapAndStoreKey( context, secretKey,
-                getKeyPair( alias, context ).getPublic() );
+        Key wrapperKey = getEncryptionWrapperKey( context );
+        keyWrapper.wrapAndStoreKey( context, bcKey, wrapperKey );
+    }
 
-        return secretKey;
-
+    protected Key getEncryptionWrapperKey( Context context )
+            throws UnrecoverableKeyException, InvalidAlgorithmParameterException,
+            NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException
+    {
+        if (Build.VERSION.SDK_INT < 23 ) {
+            KeyPair pair = getKeyPair( ALIAS_LARGE, context );
+            return pair.getPublic();
+        } else {
+            return getSecretKey( ALIAS_STANDARD );
+        }
     }
 
 }

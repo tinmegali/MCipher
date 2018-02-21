@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -31,6 +32,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 
 /**
  * Utility Class to Decrypt a byte[] that was encrypted with {@link MEncryptor}.
@@ -40,6 +42,8 @@ import javax.crypto.spec.GCMParameterSpec;
 public class MDecryptor {
 
     private static final String TAG = MDecryptor.class.getSimpleName();
+    private String ALIAS_STANDARD = Constants.ALIAS_STANDARD_DATA;
+    private String ALIAS_LARGE = Constants.ALIAS_LARGE_DATA;
 
     private KeyStore keyStore;
 
@@ -67,7 +71,7 @@ public class MDecryptor {
      * @throws KeyStoreException
      */
     @SuppressWarnings("JavaDoc")
-    private void initKeyStore()
+    protected void initKeyStore()
             throws CertificateException, NoSuchAlgorithmException,
             IOException, KeyStoreException
     {
@@ -79,9 +83,6 @@ public class MDecryptor {
     /**
      * Decrypt a given byte array, returning a decrypted {@link String}.
      *
-     * @param alias an unique id, used to store the {@link SecretKey} or
-     *              {@link KeyPair} in the {@link KeyStore} during the
-     *              encryption process.
      * @param encryptedData a byte array with the encrypted data. If the
      *                      encryption process used the AES algorithm,
      *                      the data must contain the Vector IV. In fact,
@@ -92,7 +93,7 @@ public class MDecryptor {
      * process. To access the original exception call {@link DecryptorException#getCause()}.
      */
     @NonNull
-    public String decrypt(final String alias, final byte[] encryptedData )
+    public byte[] decrypt(final byte[] encryptedData )
             throws DecryptorException
     {
         Log.i(TAG, "decrypt");
@@ -101,9 +102,9 @@ public class MDecryptor {
                     MEncryptedObject.getEncryptedObject( encryptedData );
 
             // notice that CipherIV will be null for API 18 < 23
-            final Cipher cipher = getCipher(alias, encryptedObject.getCypherIV());
-            byte[] decryptedData = decryptData( encryptedObject.getData(), cipher);
-            return MCipherUtils.encodeToStr( decryptedData );
+            final Cipher cipher = getCipher(ALIAS_STANDARD, encryptedObject.getCypherIV());
+            return decryptData( encryptedObject.getData(), cipher);
+
         }
         catch ( NoSuchProviderException | UnrecoverableEntryException | KeyStoreException
                 | NoSuchAlgorithmException | InvalidKeyException
@@ -123,12 +124,11 @@ public class MDecryptor {
     /**
      * Uses AES algorithm to decrypt large chunks of data. If the method
      * is called from SDK 23+, it will make a standard decryption operation,
-     * calling {@link MDecryptor#decrypt(String, byte[])}. If the method
+     * calling {@link MDecryptor#decrypt(byte[])}. If the method
      * id called from SDK < 23, it will make the decryption using
      * an AES algorithm, from the Bouncy Castle provider calling
-     * {@link MDecryptor#wrapperCipher(String, Context)} to get the cipher and
+     * {@link MDecryptor#wrapperCipher(String, Context, byte[])} to get the cipher and
      * then calling {@link MDecryptor#decryptData(byte[], Cipher)} providing the cipher.
-     * @param alias unique identifier to get/generate the standard SecretKey
      * @param encryptedData encrypted data
      * @param context current Context.
      * @return a byte array with the decrypted data.
@@ -136,18 +136,15 @@ public class MDecryptor {
      */
     @NonNull
     public byte[] decryptLargeData(
-            final String alias,
             final byte[] encryptedData,
             final Context context
     ) throws DecryptorException {
         try {
-
             if ( Build.VERSION.SDK_INT >= 23 ) {
-                String result = decrypt( alias, encryptedData );
-                return MCipherUtils.decode( result );
+                return decrypt( encryptedData );
             } else {
-
-                Cipher cipher = wrapperCipher(alias, context);
+                MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedData );
+                Cipher cipher = wrapperCipher(ALIAS_LARGE, context, obj.getCypherIV());
                 return decryptData(encryptedData, cipher);
             }
 
@@ -155,8 +152,8 @@ public class MDecryptor {
                 | UnrecoverableEntryException | InvalidKeyException
                 | NoSuchProviderException | InvalidAlgorithmParameterException
                 | IllegalBlockSizeException | KeyStoreException
-                | BadPaddingException | UnsupportedEncodingException
-                | KeyWrapperException e)
+                | BadPaddingException | KeyWrapperException
+                | IOException | ClassNotFoundException e)
         {
 
             String errorMsg = String.format(
@@ -188,7 +185,7 @@ public class MDecryptor {
      * @throws NoSuchProviderException
      */
     @NonNull
-    private byte[] decryptData( @NonNull final byte[] ecryptedData,
+    protected byte[] decryptData( @NonNull final byte[] ecryptedData,
                                 @NonNull final Cipher cipher)
             throws UnsupportedEncodingException, BadPaddingException,
             IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException,
@@ -221,7 +218,7 @@ public class MDecryptor {
      * @throws KeyStoreException
      */
     @NonNull
-    private Cipher getCipher(
+    protected Cipher getCipher(
             @NonNull String alias,
             @Nullable byte[] encryptionIV
     ) throws NoSuchAlgorithmException, NoSuchPaddingException,
@@ -253,7 +250,7 @@ public class MDecryptor {
      * @throws KeyStoreException
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private SecretKey getSecretKey( String alias )
+    protected SecretKey getSecretKey( String alias )
             throws UnrecoverableEntryException, NoSuchAlgorithmException,
             KeyStoreException
     {
@@ -280,7 +277,7 @@ public class MDecryptor {
      * @throws NoSuchAlgorithmException
      * @throws KeyStoreException
      */
-    private KeyPair getKeyPair( String alias )
+    protected KeyPair getKeyPair( String alias )
             throws UnrecoverableEntryException, NoSuchAlgorithmException,
             KeyStoreException, DecryptorException
     {
@@ -303,7 +300,7 @@ public class MDecryptor {
 
     /**
      * Generate a {@link Cipher} to be used with the
-     * {@link MDecryptor#decryptLargeData(String, byte[], Context)} when
+     * {@link MDecryptor#decryptLargeData(byte[], Context)} when
      * called from SDK < 23.
      * @param alias unique identifier tight to secret key.
      * @param context current Context.
@@ -320,23 +317,29 @@ public class MDecryptor {
      * @throws DecryptorException
      * @throws KeyWrapperException
      */
-    private Cipher wrapperCipher(
+    protected Cipher wrapperCipher(
             @NonNull final String alias,
-            final @NonNull Context context )
+            final @NonNull Context context,
+            final byte[] cipherIV
+    )
             throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidKeyException, UnrecoverableEntryException,
             InvalidAlgorithmParameterException, NoSuchProviderException,
             KeyStoreException, IllegalBlockSizeException, DecryptorException,
-            KeyWrapperException
+            KeyWrapperException, IOException, ClassNotFoundException
     {
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC );
-        cipher.init( Cipher.DECRYPT_MODE, getBCSecretKey( alias, context ) );
+        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC, "BC" );
+        SecretKey bcKey = getUnwrappedBCKey( alias, context );
+
+        IvParameterSpec specs = new IvParameterSpec( cipherIV );
+
+        cipher.init( Cipher.DECRYPT_MODE, bcKey, specs );
         return cipher;
     }
 
     /**
      * Load a generated a Bouncy Castle secret key with
-     * {@link MKeyWrapper#loadWrappedKey(Context, PrivateKey)}.
+     * {@link MKeyWrapper#loadWrappedBCKey(Context, Key)}.
      * If the key wasn't already generated and stored, it will throw
      * a {@link KeyWrapperException}.
      * @param alias unique identifier tight to standard secret key.
@@ -353,22 +356,24 @@ public class MDecryptor {
      * @throws DecryptorException
      * @throws KeyWrapperException
      */
-    private SecretKey getBCSecretKey(
+    protected SecretKey getUnwrappedBCKey(
             @NonNull String alias, @NonNull Context context
     )
             throws NoSuchPaddingException, UnrecoverableEntryException,
             NoSuchAlgorithmException, KeyStoreException, InvalidKeyException,
             NoSuchProviderException, InvalidAlgorithmParameterException,
-            IllegalBlockSizeException, DecryptorException, KeyWrapperException
+            IllegalBlockSizeException, DecryptorException, KeyWrapperException,
+            IOException, ClassNotFoundException
     {
 
-        MKeyWrapper keyWrapper = new MKeyWrapper();
+        Key key;
 
-        KeyPair pair = getKeyPair( alias );
-
-        // load Key
-        return keyWrapper
-                .loadWrappedKey( context, pair.getPrivate() );
+        if ( Build.VERSION.SDK_INT < 23 ) {
+            key = getKeyPair( alias ).getPrivate();
+            MKeyWrapper keyWrapper = new MKeyWrapper();
+            return keyWrapper.loadWrappedBCKey( context, key );
+        }
+        throw new DecryptorException("SDK 23+ doesn't rely on BCKeys");
     }
 
 

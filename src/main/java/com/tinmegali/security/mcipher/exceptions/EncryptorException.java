@@ -7,7 +7,7 @@ import javax.crypto.Cipher;
 /**
  * An 'wrapper' {@link Exception} thrown by encryption operations, that wraps it up
  * numerous {@link Exception} that can be thrown by
- * the {@link MEncryptor#encryptData(byte[], Cipher)} method.
+ * the {@link MEncryptor#encrypting(byte[], Cipher)} method.
  *
  * The {@link EncryptorException#getMessage()} holds an message, containing the
  * original Exception, that you can fetch it with {@link EncryptorException#getCause()}

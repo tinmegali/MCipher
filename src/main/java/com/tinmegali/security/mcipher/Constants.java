@@ -7,7 +7,11 @@ import android.os.Build;
  * process by the {@link MEncryptor} and {@link MDecryptor} classes.
  */
 
-class Constants {
+public class Constants {
+
+
+    public final static String ALIAS_STANDARD_DATA     = "com.tinmegali.security.cipher._standard";
+    public final static String ALIAS_LARGE_DATA        = "com.tinmegali.security.cipher._large";
 
     /**
      * Cypher transformation.
