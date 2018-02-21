@@ -23,14 +23,12 @@ compile 'com.tinmegali.android:mcipher:0.2'
 
 ## Encrypting data
 1. Instantiate and Initialize a `MEncryptor.class`.
-2. Choose a unique identifier to be used as your Secret Key alias.
-3. Call `MEncryptor.encrypt( String alias, String dataToEncrypt, Context context )`.
-4. You can convert the received `byte[]` to a `String` using the utility method `MCipherUtils.encodeToStr(byte[] data)`.
-5. When running **MCipher on Android version previous to 23**, it is **vital** to call `MEncryptor.encryptLargeData()` when trying to encrypt data with more than 200 symbols.
+2. Call `MEncryptor.encrypt( String dataToEncrypt, Context context )`.
+3. You can convert the received `byte[]` to a `String` using the utility method `MCipherUtils.encodeToStr(byte[] data)`.
+4. When running **MCipher on Android version previous to 23**, try to call `MEncryptor.encryptLargeData()` when trying to encrypt data with more than 240 symbols.
 
 ```java
 MEncryptor encryptor;
-final String keyAlias = "my.package.cipher.alias";
 //...
 // initializing
 private void initializeEncryptor()
@@ -55,7 +53,7 @@ private void encryptData(String dataToEncrypt) {
     if ( !dataToEncrypt.isEmpty() || dataToEncrypt.length() > 0 )
     {
         try {
-            encryptedData = encryptor.encrypt( keyAlias, dataToEncrypt, App.getContext() );
+            encryptedData = encryptor.encrypt( dataToEncrypt, App.getContext() );
             // transforming encrypted byte array to String
             String encryptedStr = MCipherUtils.encodeToStr(encryptedData);
             saveEncryptedData( encryptedData );
@@ -74,9 +72,7 @@ private void encryptData(String dataToEncrypt) {
 
 ## Decrypting data
 1. Instantiate and Initialize a `MDecryptor.class`.
-2. Call `MDecryptor.decrypt( String alias, final byte[] encryptedData )`.
-3. Use the **alias** used during the encryption of the data.
-4. When running **MCipher on Android version previous to 23**, it is **vital** to call `MDecryptor.decryptLargeData()` when trying to decrypt data with more than 200 symbols. **Notice that the data must have been encrypted with `MEncryptor.encryptLargeData()`.
+2. Call `MDecryptor.decrypt( final byte[] encryptedData )`.
 
 ```java
 MDecryptor decryptor;
@@ -106,7 +102,7 @@ private void decryptData( byte[] encryptedData ) {
         return;
     }
     try {
-        String decrypted = decryptor.decrypt(keyAlias, encryptedData);
+        String decrypted = decryptor.decrypt(encryptedData);
         Log.i(TAG, String.format("Decrypted:%n\t%s", decrypted));
     } catch (DecryptorException e) {
         Log.e(TAG, String.format("Error while trying to decrypt data." +
