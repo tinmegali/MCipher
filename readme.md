@@ -24,8 +24,9 @@ If you have the time, any help to improve the tool will be welcomed.
 
 # Using MCipher
 The encryption and decryption process relies on two interfaces,
-[MEncryptor]()
-and [MDecryptor](). All you have to do is build the interfaces,
+[MEncryptor](https://tinmegali.github.io/MCipher/javadoc/com/tinmegali/security/mcipher/MEncryptor.html)
+and [MDecryptor](https://tinmegali.github.io/MCipher/javadoc/com/tinmegali/security/mcipher/MDecryptor.html).
+All you have to do is build the interfaces,
 providing a common 'alias' for both MEcnryptor and MDecryptor and you're good to go.
 
 Keep in mind that it could be a good idea to make the encryption and decryption using background task,

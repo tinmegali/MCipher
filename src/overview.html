@@ -1,0 +1,77 @@
+<body>
+MCipher reduces the overhead to encrypt and decrypt data in Android.
+<br/>
+<ul>
+    <li>Version 0.3</li>
+    <li><a href="https://tinmegali.github.io/MCipher/">GitHub Project</a> </li>
+    <li>Licence: MIT</li>
+</ul>
+<p>
+    This simple library aims to reduce the overhead necessary to securely encrypt and
+    decrypt files in the Android system.
+    It relies only in Android native libraries, making use of the
+    <a href="https://developer.android.com/training/articles/keystore.html">KeyStore</a>,
+    combined with
+    <a href="https://developer.android.com/reference/javax/crypto/SecretKey.html">SecretKey</a> or
+    <a href="https://developer.android.com/reference/java/security/KeyPair.html">KeyPair</a>
+    to make the encryption and decryption process.
+</p>
+<p>
+    The <strong>MCipher</strong> is currently in development process,
+    but it is pretty stable so far.
+</p>
+
+<h4>Advantages</h4>
+<ul>
+    <li>Compatible with SDK 19.</li>
+    <li>Uses the best Android framework compatible with the SDK in use.</li>
+    <li>Extremely simple to use.</li>
+    <li>Relies only on Android native libraries.</li>
+</ul>
+
+<h3>Using MCipher</h3>
+<p>
+    The encryption and decryption process relies on two interfaces,
+    {@link com.tinmegali.security.mcipher.MEncryptor} and
+    {@link com.tinmegali.security.mcipher.MDecryptor}.
+    All you have to do is build the interfaces,
+    providing a common 'alias' for both MEcnryptor and MDecryptor and you're good to go.
+</p>
+<p>
+    Keep in mind that it could be a good idea to make the encryption and decryption using background task,
+    otherwise your ui thread may be compromised.
+</p>
+<pre>{@code
+    // a good idea is to use your package name as a foundation for the 'alias'
+    String ALIAS = "my.package.name.mcipher.alias"
+    MEncryptor encryptor = new MEncryptorBuilder( ALIAS ).build();
+    MDecryptor decryptor = new MDecryptorBuilder( ALIAS ).build();
+
+    String toEncrypt = "encrypt this string";
+    // encrypting
+    String encrypted = encryptor.encryptString( toEncrypt, this );
+
+    // decrypting
+    String decrypted = decryptor.decryptString( encrypted, this );
+}</pre>
+<h3>Instalation</h3>
+<p>
+    You can download MCipher from <em>jcenter</em> directly.
+    Don't forget to point to 'jcenter' distribution center.
+</p>
+<h5>Maven</h5>
+<pre>{@code
+    <dependency>
+        <groupId>com.tinmegali.android</groupId>
+        <artifactId>mcipher</artifactId>
+        <version>0.3</version>
+        <type>pom</type>
+    </dependency>
+}</pre>
+<h5>Gradle</h5>
+<code>
+    compile 'com.tinmegali.android:mcipher:0.3'
+</code>
+@version 0.3
+@author Tin Megali
+</body>
