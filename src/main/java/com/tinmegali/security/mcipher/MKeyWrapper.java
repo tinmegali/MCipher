@@ -6,13 +6,12 @@ import android.os.Build;
 import android.support.annotation.NonNull;
 import android.util.Base64;
 
-import com.tinmegali.security.mcipher.exceptions.KeyWrapperException;
+import com.tinmegali.security.mcipher.exceptions.MKeyWrapperException;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -26,12 +25,11 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 /**
- * Utility class to handle to handle the encryption/decryption and the storage
+ * Utility class to handle the encryption/decryption and the storage/load
  * of keys used in encryption and decryption operation for large chunks of data
  * in SDK previous to 23.
  *
  */
-
 @SuppressWarnings("JavaDoc")
 public class MKeyWrapper {
 
@@ -74,12 +72,12 @@ public class MKeyWrapper {
      * @param context current Context.
      * @param wrappedKey encrypted Bouncy Castle secret key.
      * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key, String)
-     * @see Constants#PREFS_NAME
-     * @see Constants#WRAPPED_KEY
+     * @see MCipherConstants#PREFS_NAME
+     * @see MCipherConstants#WRAPPED_KEY
      */
     protected void storeKey(Context context, String wrappedKey, String alias) {
         SharedPreferences pref = context
-                .getSharedPreferences( Constants.PREFS_NAME,
+                .getSharedPreferences( MCipherConstants.PREFS_NAME,
                         Context.MODE_PRIVATE );
 
         SharedPreferences.Editor editor = pref.edit();
@@ -98,7 +96,7 @@ public class MKeyWrapper {
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws IllegalBlockSizeException
-     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)
+     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key, String)
      */
     protected byte[] wrapKey(
             @NonNull final Key keyToWrap,
@@ -108,7 +106,7 @@ public class MKeyWrapper {
             NoSuchAlgorithmException, IllegalBlockSizeException,IOException
     {
 
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
+        Cipher cipher = Cipher.getInstance( MCipherConstants.TRANSFORMATION );
         cipher.init( Cipher.WRAP_MODE, keyToWrapWith );
 
         return MEncryptedObject.serializeEncryptedObj( cipher.wrap( keyToWrap ), cipher.getIV() );
@@ -117,8 +115,8 @@ public class MKeyWrapper {
     /**
      * Loads from Shared Preferences
      * a {@link SecretKey} that was already 'wrapped' and 'stored'
-     * with method {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)}.
-     * If the key isn't found, throws a {@link KeyWrapperException}.
+     * with method {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key, String)}.
+     * If the key isn't found, throws a {@link MKeyWrapperException}.
      * @param context current Context.
      * @param wrapperKey the {@link Key} to be used in the decryption.
      * @return the saved key.
@@ -129,27 +127,27 @@ public class MKeyWrapper {
      * @throws NoSuchProviderException
      * @throws InvalidKeyException
      * @throws NoSuchPaddingException
-     * @throws KeyWrapperException
+     * @throws MKeyWrapperException
      * @see MKeyWrapper#unWrapKey(byte[], Key)
      */
-    protected SecretKey loadWrappedBCKey(
+    protected SecretKey loadWrappedLargeKey(
             @NonNull Context context,
             @NonNull Key wrapperKey,
             @NonNull String alias
     ) throws UnrecoverableKeyException,
             InvalidAlgorithmParameterException, NoSuchAlgorithmException,
             KeyStoreException, NoSuchProviderException, InvalidKeyException,
-            NoSuchPaddingException, KeyWrapperException, IOException,
+            NoSuchPaddingException, MKeyWrapperException, IOException,
             ClassNotFoundException
     {
         SharedPreferences pref = context
-                .getSharedPreferences( Constants.PREFS_NAME,
+                .getSharedPreferences( MCipherConstants.PREFS_NAME,
                         Context.MODE_PRIVATE );
         String wrappedKey = pref.getString( alias, null );
 
         if ( wrappedKey == null ) {
             String msg = "There isn't any Wrapped Keys to load.";
-            throw new KeyWrapperException( msg );
+            throw new MKeyWrapperException( msg );
         }
 
         byte[] wrappedData = Base64.decode( wrappedKey, Base64.DEFAULT );
@@ -178,7 +176,7 @@ public class MKeyWrapper {
 
         MEncryptedObject obj = MEncryptedObject.getEncryptedObject( wrappedObj );
 
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
+        Cipher cipher = Cipher.getInstance( MCipherConstants.TRANSFORMATION );
         String algorithm;
         if (Build.VERSION.SDK_INT <23 ) {
             algorithm = "RSA";

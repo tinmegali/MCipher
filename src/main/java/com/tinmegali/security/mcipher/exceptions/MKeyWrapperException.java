@@ -5,10 +5,10 @@ package com.tinmegali.security.mcipher.exceptions;
  * utility class.
  *
  */
+// TODO update KeyWrapperException docs
+public class MKeyWrapperException extends Exception {
 
-public class KeyWrapperException extends Exception {
-
-    public KeyWrapperException(String message) {
+    public MKeyWrapperException(String message) {
         super(message);
     }
 }

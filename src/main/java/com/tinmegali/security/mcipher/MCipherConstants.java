@@ -2,20 +2,25 @@ package com.tinmegali.security.mcipher;
 
 import android.os.Build;
 
-import java.security.KeyStore;
-
 /**
  * Holds constant values used by the encryption/decryption
- * process by the {@link MEncryptor} and {@link MDecryptor} classes.
+ * process by the {@link MEncryptorDefault} and {@link MDecryptorDefault} classes.
  */
+public class MCipherConstants {
 
-public class Constants {
+    // keyStore providers
+    final static String KEY_STORE_PROVIDER = "AndroidKeyStore";
+    final static String KEY_STORE_PROVIDER_LARGE = "BC";
 
+    // algorithms
+    public static final String ALGORITHM_AES = "AES";
+    public static final String ALGORITHM_RSA = "RSA";
 
-    protected final static String PROVIDER = "AndroidKeyStore";
-    protected final static String PROVIDER_LARGE    = "BC";
-    public final static String ALIAS_STANDARD_DATA     = "com.tinmegali.security.cipher._standard";
-    public final static String ALIAS_LARGE_DATA        = "com.tinmegali.security.cipher._large";
+    // block mode
+    public static final String BLOCK_MODE_GCM = "GCM";
+
+    // paddings
+    public static final String PADDING_NO_PADDING = "NoPadding";
 
     /**
      * Cypher transformation.

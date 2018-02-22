@@ -2,10 +2,9 @@ package com.tinmegali.security.mcipher;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
-
-import com.tinmegali.security.mcipher.testClasses.MEncryptorForTest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -31,8 +30,18 @@ import static org.junit.Assert.assertNotNull;
 @RunWith(AndroidJUnit4.class)
 public class MCipherTestsBase {
 
-    public static final String ALIAS = "com.tinmegali.security.cipher._test_key";
-    public static final String ALIAS_LARGE = ALIAS +"_large";
+    static final String ALIAS = "com.tinmegali.security.cipher._test_key";
+    static final String ALIAS_LARGE = ALIAS +"_large";
+    static final String TRANSFORMATION_BC = "AES/GCM/NoPadding";
+    static final String TRANSFORMATION;
+    static {
+        if (Build.VERSION.SDK_INT >= 23 ) {
+
+            TRANSFORMATION = "AES/GCM/NoPadding";
+        } else {
+            TRANSFORMATION = "RSA/ECB/PKCS1Padding";
+        }
+    }
 
     protected final String s1 = "a string";
     protected final String s2 = "kahsdkjhakjsdhakjshdkjahdkjahskjdhaskjdhakjsdhaskdh";
@@ -48,7 +57,7 @@ public class MCipherTestsBase {
         keyStore = KeyStore.getInstance( KeyStore.getDefaultType() );
         keyStore.load( null );
         deleteKeys();
-        prefs = appContext.getSharedPreferences( Constants.PREFS_NAME, Context.MODE_PRIVATE );
+        prefs = appContext.getSharedPreferences( MCipherConstants.PREFS_NAME, Context.MODE_PRIVATE );
         deleteSavedKeys();
     }
 

@@ -4,7 +4,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 
 import com.tinmegali.security.mcipher.MKeyWrapper;
-import com.tinmegali.security.mcipher.exceptions.KeyWrapperException;
+import com.tinmegali.security.mcipher.exceptions.MKeyWrapperException;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -43,8 +43,8 @@ public class MKeyWrapperForTests extends MKeyWrapper {
     }
 
     @Override
-    public SecretKey loadWrappedBCKey(@NonNull Context context, @NonNull Key wrapperKey, @NonNull String alias) throws UnrecoverableKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, InvalidKeyException, NoSuchPaddingException, KeyWrapperException, IOException, ClassNotFoundException {
-        return super.loadWrappedBCKey(context, wrapperKey, alias);
+    public SecretKey loadWrappedLargeKey(@NonNull Context context, @NonNull Key wrapperKey, @NonNull String alias) throws UnrecoverableKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, InvalidKeyException, NoSuchPaddingException, MKeyWrapperException, IOException, ClassNotFoundException {
+        return super.loadWrappedLargeKey(context, wrapperKey, alias);
     }
 
     @Override

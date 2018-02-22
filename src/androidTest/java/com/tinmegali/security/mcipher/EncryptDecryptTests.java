@@ -5,8 +5,8 @@ import android.os.Build;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.tinmegali.security.mcipher.exceptions.DecryptorException;
-import com.tinmegali.security.mcipher.exceptions.EncryptorException;
+import com.tinmegali.security.mcipher.exceptions.MDecryptorException;
+import com.tinmegali.security.mcipher.exceptions.MEncryptorException;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -29,14 +29,16 @@ public class EncryptDecryptTests {
     final String s3 = "kahsdkjhakjsdhakjshdk jahdkjahsk jdhaskjdhakjsdhaskdslks lkdlkjfkjfkgjdkfhgkjdhfkgjhdkfjghkdfjhgkjhieuhriuehi ehrgiuehrighergh";
     final String sLarge = s3 + s3 + s3 + s3;
     Context appContext;
-    MEncryptor enc;
-    MDecryptor dec;
+    MEncryptorDefault enc;
+    MDecryptorDefault dec;
 
     @Before
     public void setup() throws Exception {
         appContext = InstrumentationRegistry.getTargetContext();
-        enc = new MEncryptor( MCipherTestsBase.ALIAS );
-        dec = new MDecryptor( MCipherTestsBase.ALIAS );
+        enc = new MEncryptorDefault( MCipherTestsBase.ALIAS );
+        enc.initKeyStore();
+        dec = new MDecryptorDefault( MCipherTestsBase.ALIAS );
+        dec.initKeyStore();
     }
 
     @Test
@@ -52,7 +54,7 @@ public class EncryptDecryptTests {
     }
 
     private void encryptDecryptStr(String s)
-            throws EncryptorException, DecryptorException, IOException, ClassNotFoundException {
+            throws MEncryptorException, MDecryptorException, IOException, ClassNotFoundException {
         byte[] encrypted = enc.encrypt( s, appContext );
         assertNotNull( encrypted );
 
@@ -71,7 +73,7 @@ public class EncryptDecryptTests {
     }
 
     private void encryptDecyptLarge( String s)
-            throws EncryptorException, DecryptorException, IOException, ClassNotFoundException {
+            throws MEncryptorException, MDecryptorException, IOException, ClassNotFoundException {
         byte[] encrypted = enc.encryptLargeData( s, appContext );
         assertNotNull( encrypted );
         MEncryptedObject encObj = MEncryptedObject.getEncryptedObject( encrypted );

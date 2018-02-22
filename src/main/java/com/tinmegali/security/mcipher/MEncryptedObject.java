@@ -9,7 +9,7 @@ import java.io.Serializable;
 
 /**
  * A wrapper object used during encryption and decryption
- * process made by the {@link MEncryptor} and {@link MDecryptor} classes.
+ * process made by the {@link MEncryptorDefault} and {@link MDecryptorDefault} classes.
  *
  * The object is serialized during encryption and it may contains
  * the cipher's vector IV, if the encryption was done using the 'AES'

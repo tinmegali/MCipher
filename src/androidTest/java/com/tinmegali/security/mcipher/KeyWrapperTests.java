@@ -18,7 +18,7 @@ import android.support.annotation.NonNull;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Base64;
 
-import com.tinmegali.security.mcipher.testClasses.MEncryptorForTest;
+import com.tinmegali.security.mcipher.testClasses.MEncryptorDefaultForTest;
 import com.tinmegali.security.mcipher.testClasses.MKeyWrapperForTests;
 
 import org.junit.Before;
@@ -36,13 +36,13 @@ import static org.junit.Assert.*;
 public class KeyWrapperTests extends MCipherTestsBase {
 
     MKeyWrapper wrapper;
-    MEncryptor enc;
+    MEncryptorDefault enc;
 
     @Before
     public void setup() throws Exception {
         super.setup();
         wrapper = new MKeyWrapperForTests();
-        enc = new MEncryptorForTest( MCipherTestsBase.ALIAS );
+        enc = new MEncryptorDefaultForTest( MCipherTestsBase.ALIAS );
     }
 
     @Test
@@ -53,7 +53,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
         wrapper.storeKey( appContext, wrapped, MCipherTestsBase.ALIAS_LARGE );
 
         SharedPreferences pref = appContext
-                .getSharedPreferences( Constants.PREFS_NAME,
+                .getSharedPreferences( MCipherConstants.PREFS_NAME,
                         Context.MODE_PRIVATE );
 
         String loadedWrapped = pref.getString( MCipherTestsBase.ALIAS_LARGE, null );
@@ -78,7 +78,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
     @Test
     public void storeAndLoad() throws Exception {
 
-        SecretKey bcKey = enc.generateBCSecretKey( appContext );
+        SecretKey bcKey = enc.generateSecretKeyForLargeOps( appContext );
         assertNotNull( bcKey );
         Key encryptionKey = getEncryptionWrapperKey();
         assertNotNull( "UnWrapper Key NULL", encryptionKey );
@@ -86,7 +86,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
         wrapper.wrapAndStoreKey( appContext, bcKey, encryptionKey, MCipherTestsBase.ALIAS_LARGE);
 
         Key decryptionKey = getDecryptionWrapperKey();
-        SecretKey loadedBcKey = wrapper.loadWrappedBCKey( appContext, decryptionKey, MCipherTestsBase.ALIAS_LARGE );
+        SecretKey loadedBcKey = wrapper.loadWrappedLargeKey( appContext, decryptionKey, MCipherTestsBase.ALIAS_LARGE );
         assertNotNull( loadedBcKey );
 
     }
@@ -95,7 +95,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
     private String getWrappedKey() throws Exception {
         Key wrapperKey = getEncryptionWrapperKey();
 
-        SecretKey bcKey = enc.generateBCSecretKey( appContext );
+        SecretKey bcKey = enc.generateSecretKeyForLargeOps( appContext );
         assertNotNull("Null BCSecretKey", bcKey );
 
         byte[] wrapped = wrapper.wrapKey( bcKey, wrapperKey );
@@ -110,7 +110,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
             assertNotNull( "Null RSA KeyPair", pair);
             return pair.getPublic();
         } else {
-            Key key = enc.getSecretKey( enc.getALIAS() );
+            Key key = enc.getSecretKey( enc.getAlias() );
             assertNotNull( "Null SecretKey", key );
             return key;
         }
@@ -122,7 +122,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
             assertNotNull( "Null RSA KeyPair", pair);
             return pair.getPrivate();
         } else {
-            Key key = enc.getSecretKey( enc.getALIAS() );
+            Key key = enc.getSecretKey( enc.getAlias() );
             assertNotNull( "Null SecretKey", key );
             return key;
         }

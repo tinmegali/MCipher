@@ -3,8 +3,8 @@ package com.tinmegali.security.mcipher;
 import android.os.Build;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.tinmegali.security.mcipher.testClasses.MDecryptorForTest;
-import com.tinmegali.security.mcipher.testClasses.MEncryptorForTest;
+import com.tinmegali.security.mcipher.testClasses.MDecryptorDefaultForTest;
+import com.tinmegali.security.mcipher.testClasses.MEncryptorDefaultForTest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -12,7 +12,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.security.KeyPair;
-import java.security.Provider;
 import java.util.Arrays;
 
 import javax.crypto.Cipher;
@@ -33,10 +32,10 @@ import static org.junit.Assert.*;
  */
 
 @RunWith(AndroidJUnit4.class)
-public class MDecryptorTests extends MCipherTestsBase {
+public class MDecryptorDefaultTests extends MCipherTestsBase {
 
-    MDecryptor dec;
-    MEncryptor enc;
+    MDecryptorDefault dec;
+    MEncryptorDefault enc;
 
     byte[] e1,e2,e3,e4;
 
@@ -44,10 +43,12 @@ public class MDecryptorTests extends MCipherTestsBase {
     @Before
     public void setup() throws Exception {
         super.setup();
-        enc = new MEncryptorForTest( MCipherTestsBase.ALIAS );
+        enc = new MEncryptorDefaultForTest( MCipherTestsBase.ALIAS );
+        enc.initKeyStore();
         assertNotNull( enc );
 
-        dec = new MDecryptorForTest( MCipherTestsBase.ALIAS );
+        dec = new MDecryptorDefaultForTest( MCipherTestsBase.ALIAS );
+        dec.initKeyStore();
         assertNotNull( dec );
 
         encryptString();
@@ -69,7 +70,7 @@ public class MDecryptorTests extends MCipherTestsBase {
     @Test
     public void getKeyPair() throws Exception {
         if ( !isVersion23Up() ) {
-            KeyPair pair = dec.getKeyPair( Constants.ALIAS_STANDARD_DATA );
+            KeyPair pair = dec.getKeyPair( MCipherTestsBase.ALIAS );
             assertNotNull( pair );
         }
     }
@@ -77,7 +78,7 @@ public class MDecryptorTests extends MCipherTestsBase {
     @Test
     public void getSecretKey() throws Exception {
         if ( isVersion23Up() ) {
-            SecretKey key = dec.getSecretKey( Constants.ALIAS_STANDARD_DATA );
+            SecretKey key = dec.getSecretKey( MCipherTestsBase.ALIAS );
             assertNotNull( key );
         }
     }
@@ -85,12 +86,12 @@ public class MDecryptorTests extends MCipherTestsBase {
     @Test
     public void getBCSecretKey() throws Exception {
         if ( !isVersion23Up() ) {
-            String alias = Constants.ALIAS_LARGE_DATA;
+            String alias = MCipherTestsBase.ALIAS_LARGE;
 
             deleteSavedKeys();
-            SecretKey originalKey = enc.getBCSecretKey( Constants.ALIAS_STANDARD_DATA, appContext );
+            SecretKey originalKey = enc.getBCSecretKey( MCipherTestsBase.ALIAS, appContext );
 
-            SecretKey bcKey = dec.getUnwrappedBCKey(alias, appContext);
+            SecretKey bcKey = dec.getUnwrappedLargeKey(alias, appContext);
             assertNotNull(bcKey);
             assertEquals( bcKey.hashCode(), originalKey.hashCode() );
         }
@@ -99,9 +100,9 @@ public class MDecryptorTests extends MCipherTestsBase {
     @Test
     public void cipher() throws Exception {
         MEncryptedObject obj = MEncryptedObject.getEncryptedObject( e1 );
-        Cipher cipher = dec.getCipher( Constants.ALIAS_STANDARD_DATA, obj.getCypherIV() );
+        Cipher cipher = dec.getCipher( MCipherTestsBase.ALIAS, obj.getCypherIV() );
         assertNotNull( "Cipher is null", cipher );
-        assertEquals( "Wrong algorithm", cipher.getAlgorithm(), Constants.TRANSFORMATION );
+        assertEquals( "Wrong algorithm", cipher.getAlgorithm(), MCipherTestsBase.TRANSFORMATION );
         if ( Build.VERSION.SDK_INT < 23 ) {
             assertNull( cipher.getIV() );
         } else {
@@ -151,8 +152,8 @@ public class MDecryptorTests extends MCipherTestsBase {
         assertNotNull( obj.getData() );
         assertNotNull( obj.getCypherIV() );
 
-        Cipher cipherDec = Cipher.getInstance( Constants.TRANSFORMATION_BC );
-        SecretKey bcKey = dec.getUnwrappedBCKey( Constants.ALIAS_LARGE_DATA, appContext );
+        Cipher cipherDec = Cipher.getInstance( MCipherTestsBase.TRANSFORMATION_BC );
+        SecretKey bcKey = dec.getUnwrappedLargeKey( MCipherTestsBase.ALIAS_LARGE, appContext );
         IvParameterSpec specs = new IvParameterSpec( obj.getCypherIV() );
         cipherDec.init( Cipher.DECRYPT_MODE, bcKey, specs );
         assertNotNull( cipherDec );
@@ -179,10 +180,10 @@ public class MDecryptorTests extends MCipherTestsBase {
         if ( !isVersion23Up() ) {
             e4 = enc.encryptLargeData( s4, appContext );
             byte[] cipherIV = MEncryptedObject.getEncryptedObject( e4 ).getCypherIV();
-            Cipher cipher = dec.wrapperCipher( Constants.ALIAS_LARGE_DATA, appContext, cipherIV );
+            Cipher cipher = dec.wrapperCipher( MCipherTestsBase.ALIAS_LARGE, appContext, cipherIV );
             assertNotNull( cipher );
             assertNotNull( cipher.getIV() );
-            assertTrue( cipher.getAlgorithm().equals( Constants.TRANSFORMATION_BC ));
+            assertTrue( cipher.getAlgorithm().equals( MCipherTestsBase.TRANSFORMATION_BC ));
         }
     }
 

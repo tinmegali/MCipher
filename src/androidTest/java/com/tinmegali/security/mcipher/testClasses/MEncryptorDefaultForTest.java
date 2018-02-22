@@ -4,9 +4,8 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.tinmegali.security.mcipher.Constants;
-import com.tinmegali.security.mcipher.MEncryptor;
-import com.tinmegali.security.mcipher.exceptions.EncryptorException;
+import com.tinmegali.security.mcipher.MEncryptorDefault;
+import com.tinmegali.security.mcipher.exceptions.MEncryptorException;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -37,10 +36,19 @@ import javax.crypto.SecretKey;
  * ___________________________________
  */
 
-public class MEncryptorForTest extends MEncryptor {
+public class MEncryptorDefaultForTest extends MEncryptorDefault {
 
-    public MEncryptorForTest( String alias ) throws EncryptorException {
+    public MEncryptorDefaultForTest(String alias ) throws MEncryptorException {
         super( alias );
+        try {
+            this.initKeyStore();
+        } catch (CertificateException | KeyStoreException
+                | IOException | NoSuchAlgorithmException e) {
+            String errorMsg =
+                    String.format("Something went wrong while initiating the KeyStore." +
+                            "%n\t%s", e.getMessage());
+            throw new MEncryptorException( errorMsg, e );
+        }
     }
 
     @Override
@@ -54,23 +62,18 @@ public class MEncryptorForTest extends MEncryptor {
     }
 
     @Override
-    public byte[] encrypt(@NonNull String textToEncrypt, @Nullable Context context) throws EncryptorException {
+    public byte[] encrypt(@NonNull String textToEncrypt, @Nullable Context context) throws MEncryptorException {
         return super.encrypt(textToEncrypt, context);
     }
 
     @Override
-    public byte[] encryptLargeData(@NonNull String dataToEncrypt, @NonNull Context context) throws EncryptorException {
-        return super.encryptLargeData(dataToEncrypt, context);
-    }
-
-    @Override
-    public byte[] encrypting(byte[] toEncrypt, Cipher cipher) throws UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, IOException, InvalidAlgorithmParameterException, SignatureException, BadPaddingException, IllegalBlockSizeException {
-        return super.encrypting(toEncrypt, cipher);
+    public byte[] encryptData(byte[] toEncrypt, Cipher cipher) throws UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, IOException, InvalidAlgorithmParameterException, SignatureException, BadPaddingException, IllegalBlockSizeException {
+        return super.encryptData(toEncrypt, cipher);
     }
 
     @Override
     public Cipher cipherForEncrypt(@NonNull String alias, @Nullable Context context)
-            throws EncryptorException {
+            throws MEncryptorException {
         return super.cipherForEncrypt(alias, context);
     }
 
@@ -100,12 +103,12 @@ public class MEncryptorForTest extends MEncryptor {
     }
 
     @Override
-    public SecretKey generateBCSecretKey(Context context) throws NoSuchAlgorithmException, NoSuchProviderException, UnrecoverableKeyException, KeyStoreException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException {
-        return super.generateBCSecretKey(context);
+    public SecretKey generateSecretKeyForLargeOps(Context context) throws NoSuchAlgorithmException, NoSuchProviderException, UnrecoverableKeyException, KeyStoreException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException {
+        return super.generateSecretKeyForLargeOps(context);
     }
 
     @Override
-    public void wrapAndStoreBCKey(Context context, SecretKey bcKey) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, UnrecoverableKeyException, KeyStoreException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
-        super.wrapAndStoreBCKey(context, bcKey);
+    public void wrapAndStoreLargeKey(Context context, SecretKey bcKey) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, UnrecoverableKeyException, KeyStoreException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
+        super.wrapAndStoreLargeKey(context, bcKey);
     }
 }

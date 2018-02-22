@@ -4,7 +4,7 @@ import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.tinmegali.security.mcipher.testClasses.MEncryptorForTest;
+import com.tinmegali.security.mcipher.testClasses.MEncryptorDefaultForTest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -32,14 +32,14 @@ import static org.junit.Assert.*;
  */
 
 @RunWith(AndroidJUnit4.class)
-public class MEncryptorTests extends MCipherTestsBase {
+public class MEncryptorDefaultTests extends MCipherTestsBase {
 
-    private MEncryptorForTest enc;
+    private MEncryptorDefaultForTest enc;
 
     @Before
     public void setup() throws Exception {
         super.setup();
-        enc = new MEncryptorForTest( MCipherTestsBase.ALIAS );
+        enc = new MEncryptorDefaultForTest( MCipherTestsBase.ALIAS );
         assertNotNull( enc );
     }
 
@@ -106,7 +106,7 @@ public class MEncryptorTests extends MCipherTestsBase {
 
     @Test
     public void generateBCSecretKey() throws Exception {
-        SecretKey key = enc.generateBCSecretKey( appContext );
+        SecretKey key = enc.generateSecretKeyForLargeOps( appContext );
         assertNotNull( key );
     }
 
@@ -132,7 +132,7 @@ public class MEncryptorTests extends MCipherTestsBase {
 
     @Test
     public void encryptLarge() throws Exception {
-        byte[] d4 = enc.encryptLargeData( s4, appContext );
+        byte[] d4 = enc.encryptLargeData( MCipherUtils.decode(s4) , appContext );
         assertEncryption( d4 );
 
         byte[] iv = MCipherUtils.generateIV();

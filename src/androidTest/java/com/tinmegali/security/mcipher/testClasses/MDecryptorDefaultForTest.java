@@ -4,9 +4,9 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.tinmegali.security.mcipher.MDecryptor;
-import com.tinmegali.security.mcipher.exceptions.DecryptorException;
-import com.tinmegali.security.mcipher.exceptions.KeyWrapperException;
+import com.tinmegali.security.mcipher.MDecryptorDefault;
+import com.tinmegali.security.mcipher.exceptions.MDecryptorException;
+import com.tinmegali.security.mcipher.exceptions.MKeyWrapperException;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -36,10 +36,19 @@ import javax.crypto.SecretKey;
  * ___________________________________
  */
 
-public class MDecryptorForTest extends MDecryptor {
+public class MDecryptorDefaultForTest extends MDecryptorDefault {
 
-    public MDecryptorForTest( String alias ) throws DecryptorException {
+    public MDecryptorDefaultForTest(String alias ) throws MDecryptorException {
         super( alias );
+        try {
+            initKeyStore();
+        } catch (CertificateException | NoSuchAlgorithmException
+                | IOException | KeyStoreException e) {
+            String errorMsg =
+                    String.format("Something went wrong while initiating the KeyStore." +
+                            "%n\t%s", e.getMessage());
+            throw new MDecryptorException( errorMsg, e );
+        }
     }
 
     @Override
@@ -49,13 +58,13 @@ public class MDecryptorForTest extends MDecryptor {
 
     @NonNull
     @Override
-    public byte[] decrypt(@NonNull byte[] encryptedData, @Nullable Context context) throws DecryptorException {
+    public byte[] decrypt(@NonNull byte[] encryptedData, @Nullable Context context) throws MDecryptorException {
         return super.decrypt(encryptedData, context);
     }
 
     @NonNull
     @Override
-    public byte[] decryptLargeData(byte[] encryptedData, Context context) throws DecryptorException {
+    public byte[] decryptLargeData(byte[] encryptedData, Context context) throws MDecryptorException {
         return super.decryptLargeData(encryptedData, context);
     }
 
@@ -67,7 +76,7 @@ public class MDecryptorForTest extends MDecryptor {
 
     @NonNull
     @Override
-    protected Cipher getCipher(@NonNull String alias, @Nullable byte[] encryptionIV) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, UnrecoverableEntryException, KeyStoreException, DecryptorException, NoSuchProviderException {
+    protected Cipher getCipher(@NonNull String alias, @Nullable byte[] encryptionIV) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, UnrecoverableEntryException, KeyStoreException, MDecryptorException, NoSuchProviderException {
         return super.getCipher(alias, encryptionIV);
     }
 
@@ -77,17 +86,17 @@ public class MDecryptorForTest extends MDecryptor {
     }
 
     @Override
-    public KeyPair getKeyPair(String alias) throws UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, DecryptorException {
+    public KeyPair getKeyPair(String alias) throws UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, MDecryptorException {
         return super.getKeyPair(alias);
     }
 
     @Override
-    public Cipher wrapperCipher(@NonNull String alias, @NonNull Context context, byte[] cipherIV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchProviderException, KeyStoreException, IllegalBlockSizeException, DecryptorException, KeyWrapperException, IOException, ClassNotFoundException {
+    public Cipher wrapperCipher(@NonNull String alias, @NonNull Context context, byte[] cipherIV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchProviderException, KeyStoreException, IllegalBlockSizeException, MDecryptorException, MKeyWrapperException, IOException, ClassNotFoundException {
         return super.wrapperCipher(alias, context, cipherIV);
     }
 
     @Override
-    public SecretKey getUnwrappedBCKey(@NonNull String alias, @NonNull Context context) throws NoSuchPaddingException, UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, InvalidKeyException, NoSuchProviderException, InvalidAlgorithmParameterException, IllegalBlockSizeException, DecryptorException, KeyWrapperException, IOException, ClassNotFoundException {
-        return super.getUnwrappedBCKey(alias, context);
+    public SecretKey getUnwrappedLargeKey(@NonNull String alias, @NonNull Context context) throws NoSuchPaddingException, UnrecoverableEntryException, NoSuchAlgorithmException, KeyStoreException, InvalidKeyException, NoSuchProviderException, InvalidAlgorithmParameterException, IllegalBlockSizeException, MDecryptorException, MKeyWrapperException, IOException, ClassNotFoundException {
+        return super.getUnwrappedLargeKey(alias, context);
     }
 }
