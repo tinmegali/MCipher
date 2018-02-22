@@ -32,6 +32,7 @@ import static org.junit.Assert.assertNotNull;
 public class MCipherTestsBase {
 
     public static final String ALIAS = "com.tinmegali.security.cipher._test_key";
+    public static final String ALIAS_LARGE = ALIAS +"_large";
 
     protected final String s1 = "a string";
     protected final String s2 = "kahsdkjhakjsdhakjshdkjahdkjahskjdhaskjdhakjsdhaskdh";
@@ -67,7 +68,7 @@ public class MCipherTestsBase {
 
     protected void deleteSavedKeys() {
         SharedPreferences.Editor editor = prefs.edit();
-        editor.remove( Constants.WRAPPED_KEY );
+        editor.remove( MCipherTestsBase.ALIAS_LARGE );
         editor.commit();
     }
 

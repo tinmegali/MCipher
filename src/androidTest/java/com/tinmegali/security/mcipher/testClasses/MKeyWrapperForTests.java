@@ -33,23 +33,23 @@ import javax.crypto.SecretKey;
 public class MKeyWrapperForTests extends MKeyWrapper {
 
     @Override
-    public void wrapAndStoreKey(@NonNull Context context, @NonNull SecretKey keyToWrap, @NonNull Key keyToWrapWith) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, UnrecoverableKeyException, KeyStoreException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
-        super.wrapAndStoreKey(context, keyToWrap, keyToWrapWith);
+    public void wrapAndStoreKey(@NonNull Context context, @NonNull SecretKey keyToWrap, @NonNull Key keyToWrapWith, @NonNull String alias) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, UnrecoverableKeyException, KeyStoreException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
+        super.wrapAndStoreKey(context, keyToWrap, keyToWrapWith, alias);
     }
 
     @Override
-    public void storeKey(Context context, String wrappedKey) {
-        super.storeKey(context, wrappedKey);
+    public void storeKey(Context context, String wrappedKey, String alias) {
+        super.storeKey(context, wrappedKey, alias);
+    }
+
+    @Override
+    public SecretKey loadWrappedBCKey(@NonNull Context context, @NonNull Key wrapperKey, @NonNull String alias) throws UnrecoverableKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, InvalidKeyException, NoSuchPaddingException, KeyWrapperException, IOException, ClassNotFoundException {
+        return super.loadWrappedBCKey(context, wrapperKey, alias);
     }
 
     @Override
     public byte[] wrapKey(@NonNull Key keyToWrap, @NonNull Key keyToWrapWith) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, IOException {
         return super.wrapKey(keyToWrap, keyToWrapWith);
-    }
-
-    @Override
-    public SecretKey loadWrappedBCKey(Context context, Key wrapperKey) throws UnrecoverableKeyException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, InvalidKeyException, NoSuchPaddingException, KeyWrapperException, IOException, ClassNotFoundException {
-        return super.loadWrappedBCKey(context, wrapperKey);
     }
 
     @Override

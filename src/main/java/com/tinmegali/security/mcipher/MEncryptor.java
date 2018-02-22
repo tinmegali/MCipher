@@ -42,7 +42,6 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.security.auth.x500.X500Principal;
 
@@ -60,7 +59,7 @@ public class MEncryptor {
     private final String ALIAS_LARGE;
     private String TRANSFORMATION = Constants.TRANSFORMATION;
     private String TRANSFORMATION_LARGE = Constants.TRANSFORMATION_BC;
-    private String PROVIDER = Constants.PROVIDER_STANDARD;
+    private String PROVIDER = Constants.PROVIDER;
     private String PROVIDER_LARGE = Constants.PROVIDER_LARGE;
 
     private boolean transformationStandard = true;
@@ -113,7 +112,7 @@ public class MEncryptor {
             IOException, KeyStoreException
     {
         Log.i(TAG, "initKeyStore()");
-        keyStore = KeyStore.getInstance( Constants.ANDROID_KEY_STORE );
+        keyStore = KeyStore.getInstance( Constants.PROVIDER );
         keyStore.load( null );
     }
 
@@ -601,7 +600,7 @@ public class MEncryptor {
 
     /**
      * Load or generate a Bouncy Castle secret key. If the key was already wrapped,
-     * it is loaded with {@link MKeyWrapper#loadWrappedBCKey(Context, Key)},
+     * it is loaded with {@link MKeyWrapper#loadWrappedBCKey(Context, Key, String)},
      * otherwise it is generated and wrapped with
      * {@link MEncryptor#generateBCSecretKey(Context)}
      * @param alias unique identifier tight to the secret key.
@@ -634,13 +633,13 @@ public class MEncryptor {
 
                 // load Key
                 return keyWrapper
-                        .loadWrappedBCKey(context, pair.getPrivate());
+                        .loadWrappedBCKey(context, pair.getPrivate(), ALIAS_LARGE);
             }
             else
             {
                 // SDK 23+
                 SecretKey key = getSecretKey(alias);
-                return keyWrapper.loadWrappedBCKey(context, key);
+                return keyWrapper.loadWrappedBCKey(context, key, ALIAS_LARGE);
 
             }
         } catch (KeyWrapperException e) {
@@ -652,7 +651,7 @@ public class MEncryptor {
 
     /**
      * Generate a Bouncy Castle AES secret key and wraps it
-     * using {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)}.
+     * using {@link MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key, String)}.
      * @param context current Context
      * @return a Bouncy Castle secret key.
      * @throws NoSuchAlgorithmException
@@ -693,7 +692,7 @@ public class MEncryptor {
         // wrap and store key
         MKeyWrapper keyWrapper = new MKeyWrapper();
         Key wrapperKey = getEncryptionWrapperKey( context );
-        keyWrapper.wrapAndStoreKey( context, bcKey, wrapperKey );
+        keyWrapper.wrapAndStoreKey( context, bcKey, wrapperKey, ALIAS_LARGE );
     }
 
     protected Key getEncryptionWrapperKey( Context context )

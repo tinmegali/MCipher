@@ -51,12 +51,13 @@ public class MKeyWrapper {
      * @throws NoSuchProviderException
      * @throws InvalidAlgorithmParameterException
      * @see MKeyWrapper#wrapKey(Key, Key)
-     * @see MKeyWrapper#storeKey(Context, String)
+     * @see MKeyWrapper#storeKey(Context, String, String)
      */
     protected void wrapAndStoreKey(
             @NonNull Context context,
             @NonNull SecretKey keyToWrap,
-            @NonNull Key keyToWrapWith
+            @NonNull Key keyToWrapWith,
+            @NonNull String alias
     ) throws InvalidKeyException, NoSuchPaddingException,
             NoSuchAlgorithmException, IllegalBlockSizeException,
             UnrecoverableKeyException, KeyStoreException,
@@ -65,24 +66,24 @@ public class MKeyWrapper {
     {
         byte[] wrapped = wrapKey( keyToWrap, keyToWrapWith );
         String wrappedKey = Base64.encodeToString( wrapped, Base64.DEFAULT );
-        storeKey(context, wrappedKey);
+        storeKey(context, wrappedKey, alias);
     }
 
     /**
      * Store a encrypted secret key ('wrappedKey') in the Shared Preferences.
      * @param context current Context.
      * @param wrappedKey encrypted Bouncy Castle secret key.
-     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key)
+     * @see MKeyWrapper#wrapAndStoreKey(Context, SecretKey, Key, String)
      * @see Constants#PREFS_NAME
      * @see Constants#WRAPPED_KEY
      */
-    protected void storeKey(Context context, String wrappedKey) {
+    protected void storeKey(Context context, String wrappedKey, String alias) {
         SharedPreferences pref = context
                 .getSharedPreferences( Constants.PREFS_NAME,
                         Context.MODE_PRIVATE );
 
         SharedPreferences.Editor editor = pref.edit();
-        editor.putString( Constants.WRAPPED_KEY, wrappedKey );
+        editor.putString( alias, wrappedKey );
         editor.apply();
     }
 
@@ -132,7 +133,9 @@ public class MKeyWrapper {
      * @see MKeyWrapper#unWrapKey(byte[], Key)
      */
     protected SecretKey loadWrappedBCKey(
-            Context context, Key wrapperKey
+            @NonNull Context context,
+            @NonNull Key wrapperKey,
+            @NonNull String alias
     ) throws UnrecoverableKeyException,
             InvalidAlgorithmParameterException, NoSuchAlgorithmException,
             KeyStoreException, NoSuchProviderException, InvalidKeyException,
@@ -142,7 +145,7 @@ public class MKeyWrapper {
         SharedPreferences pref = context
                 .getSharedPreferences( Constants.PREFS_NAME,
                         Context.MODE_PRIVATE );
-        String wrappedKey = pref.getString( Constants.WRAPPED_KEY, null );
+        String wrappedKey = pref.getString( alias, null );
 
         if ( wrappedKey == null ) {
             String msg = "There isn't any Wrapped Keys to load.";

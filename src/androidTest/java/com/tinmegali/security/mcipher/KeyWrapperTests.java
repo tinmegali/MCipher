@@ -50,13 +50,13 @@ public class KeyWrapperTests extends MCipherTestsBase {
 
         String wrapped = getWrappedKey();
 
-        wrapper.storeKey( appContext, wrapped );
+        wrapper.storeKey( appContext, wrapped, MCipherTestsBase.ALIAS_LARGE );
 
         SharedPreferences pref = appContext
                 .getSharedPreferences( Constants.PREFS_NAME,
                         Context.MODE_PRIVATE );
 
-        String loadedWrapped = pref.getString( Constants.WRAPPED_KEY, null );
+        String loadedWrapped = pref.getString( MCipherTestsBase.ALIAS_LARGE, null );
         assertNotNull( "Loaded Wrapped Key NULL", loadedWrapped );
         assertTrue( wrapped.equals( loadedWrapped ) );
     }
@@ -83,10 +83,10 @@ public class KeyWrapperTests extends MCipherTestsBase {
         Key encryptionKey = getEncryptionWrapperKey();
         assertNotNull( "UnWrapper Key NULL", encryptionKey );
 
-        wrapper.wrapAndStoreKey( appContext, bcKey, encryptionKey);
+        wrapper.wrapAndStoreKey( appContext, bcKey, encryptionKey, MCipherTestsBase.ALIAS_LARGE);
 
         Key decryptionKey = getDecryptionWrapperKey();
-        SecretKey loadedBcKey = wrapper.loadWrappedBCKey( appContext, decryptionKey );
+        SecretKey loadedBcKey = wrapper.loadWrappedBCKey( appContext, decryptionKey, MCipherTestsBase.ALIAS_LARGE );
         assertNotNull( loadedBcKey );
 
     }

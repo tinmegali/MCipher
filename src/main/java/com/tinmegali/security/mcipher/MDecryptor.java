@@ -48,7 +48,7 @@ public class MDecryptor {
     private final String ALIAS_LARGE;
     private String TRANSFORMATION = Constants.TRANSFORMATION;
     private String TRANSFORMATION_LARGE = Constants.TRANSFORMATION_BC;
-    private String PROVIDER_STANDARD = Constants.PROVIDER_STANDARD;
+    private String PROVIDER_STANDARD = Constants.PROVIDER;
     private String PROVIDER_LARGE = Constants.PROVIDER_LARGE;
     private boolean transformationStandard = true;
     private AlgorithmParameterSpec STANDARD_SPECS;
@@ -87,7 +87,7 @@ public class MDecryptor {
             IOException, KeyStoreException
     {
         Log.i(TAG, "initKeyStore()");
-        keyStore = KeyStore.getInstance( Constants.ANDROID_KEY_STORE );
+        keyStore = KeyStore.getInstance( Constants.PROVIDER);
         keyStore.load( null );
     }
 
@@ -362,7 +362,7 @@ public class MDecryptor {
 
     /**
      * Load a generated a Bouncy Castle secret key with
-     * {@link MKeyWrapper#loadWrappedBCKey(Context, Key)}.
+     * {@link MKeyWrapper#loadWrappedBCKey(Context, Key, String)}.
      * If the key wasn't already generated and stored, it will throw
      * a {@link KeyWrapperException}.
      * @param alias unique identifier tight to standard secret key.
@@ -394,7 +394,7 @@ public class MDecryptor {
         if ( Build.VERSION.SDK_INT < 23 ) {
             key = getKeyPair( alias ).getPrivate();
             MKeyWrapper keyWrapper = new MKeyWrapper();
-            return keyWrapper.loadWrappedBCKey( context, key );
+            return keyWrapper.loadWrappedBCKey( context, key, ALIAS_LARGE );
         }
         throw new DecryptorException("SDK 23+ doesn't rely on BCKeys");
     }

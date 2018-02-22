@@ -12,8 +12,8 @@ import java.security.KeyStore;
 public class Constants {
 
 
-    protected final static String PROVIDER_STANDARD = "AndroidKeyStore";
-    protected final static String PROVIDER_LARGE = "BC";
+    protected final static String PROVIDER = "AndroidKeyStore";
+    protected final static String PROVIDER_LARGE    = "BC";
     public final static String ALIAS_STANDARD_DATA     = "com.tinmegali.security.cipher._standard";
     public final static String ALIAS_LARGE_DATA        = "com.tinmegali.security.cipher._large";
 
@@ -39,11 +39,6 @@ public class Constants {
      * on older versions of the Android SDK (API < 23).
      */
     static final String TRANSFORMATION_BC = "AES/GCM/NoPadding";
-
-    /**
-     * Android's standard {@link java.security.KeyStore} provider.
-     */
-    static final String ANDROID_KEY_STORE = "AndroidKeyStore";
 
     /**
      * Shared Preferences name. Prefs are used to store an encrypted SecretKey

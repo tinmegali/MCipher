@@ -52,9 +52,9 @@ public class MEncryptorTests extends MCipherTestsBase {
     @Test
     public void generateKeyPair() throws Exception {
         if ( Build.VERSION.SDK_INT < 23 ) {
-            KeyPair pair = enc.generateKeyPair(Constants.ALIAS_STANDARD_DATA, appContext);
+            KeyPair pair = enc.generateKeyPair( MCipherTestsBase.ALIAS, appContext);
             assertPair(pair);
-            pair = enc.generateKeyPair(Constants.ALIAS_LARGE_DATA, appContext);
+            pair = enc.generateKeyPair(MCipherTestsBase.ALIAS_LARGE, appContext);
             assertPair(pair);
         }
     }
@@ -62,19 +62,19 @@ public class MEncryptorTests extends MCipherTestsBase {
     @Test
     public void getKeyPair() throws Exception {
         if ( Build.VERSION.SDK_INT < 23 ) {
-            KeyPair generatedPair = enc.getKeyPair(Constants.ALIAS_STANDARD_DATA, appContext);
+            KeyPair generatedPair = enc.getKeyPair(MCipherTestsBase.ALIAS, appContext);
             assertPair(generatedPair);
 
-            KeyPair loadedPair = enc.getKeyPair(Constants.ALIAS_STANDARD_DATA, appContext);
+            KeyPair loadedPair = enc.getKeyPair(MCipherTestsBase.ALIAS, appContext);
             assertPair(loadedPair);
 
             assertTrue(loadedPair.getPublic().equals(generatedPair.getPublic()));
             assertTrue(loadedPair.getPrivate().equals(generatedPair.getPrivate()));
 
-            generatedPair = enc.getKeyPair(Constants.ALIAS_LARGE_DATA, appContext);
+            generatedPair = enc.getKeyPair(MCipherTestsBase.ALIAS_LARGE, appContext);
             assertPair(generatedPair);
 
-            loadedPair = enc.getKeyPair(Constants.ALIAS_LARGE_DATA, appContext);
+            loadedPair = enc.getKeyPair(MCipherTestsBase.ALIAS_LARGE, appContext);
             assertPair(loadedPair);
 
             assertTrue(loadedPair.getPublic().equals(generatedPair.getPublic()));
@@ -87,7 +87,7 @@ public class MEncryptorTests extends MCipherTestsBase {
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void generateSecretKey() throws Exception {
         if( Build.VERSION.SDK_INT > 23) {
-            SecretKey key = enc.generateSecretKey(Constants.ALIAS_STANDARD_DATA);
+            SecretKey key = enc.generateSecretKey(MCipherTestsBase.ALIAS);
             assertNotNull(key);
         }
     }
@@ -96,10 +96,10 @@ public class MEncryptorTests extends MCipherTestsBase {
     @RequiresApi( api = Build.VERSION_CODES.M)
     public void getSecretKey() throws Exception {
         if ( Build.VERSION.SDK_INT > 23 ) {
-            SecretKey key = enc.getSecretKey( Constants.ALIAS_STANDARD_DATA );
+            SecretKey key = enc.getSecretKey( MCipherTestsBase.ALIAS );
             assertNotNull(key);
 
-            key = enc.getSecretKey( Constants.ALIAS_LARGE_DATA );
+            key = enc.getSecretKey( MCipherTestsBase.ALIAS_LARGE );
             assertNotNull(key);
         }
     }
@@ -115,11 +115,11 @@ public class MEncryptorTests extends MCipherTestsBase {
         String alias;
         if (Build.VERSION.SDK_INT < 23)
         {
-            alias = Constants.ALIAS_LARGE_DATA;
+            alias = MCipherTestsBase.ALIAS_LARGE;
         }
         else //SDK 23+
         {
-            alias = Constants.ALIAS_STANDARD_DATA;
+            alias = MCipherTestsBase.ALIAS;
         }
 
         SecretKey generatedBCKey = enc.getBCSecretKey( alias, appContext );
@@ -137,7 +137,7 @@ public class MEncryptorTests extends MCipherTestsBase {
 
         byte[] iv = MCipherUtils.generateIV();
         assertNotNull( iv );
-        Cipher cipher = enc.cipherLargeData( Constants.ALIAS_LARGE_DATA, appContext, iv );
+        Cipher cipher = enc.cipherLargeData( MCipherTestsBase.ALIAS_LARGE, appContext, iv );
         assertNotNull( cipher );
 
         byte[] toEncrypt = MCipherUtils.decode( s4 );
@@ -187,7 +187,7 @@ public class MEncryptorTests extends MCipherTestsBase {
 
     @Test
     public void getCipher() throws Exception {
-        Cipher cipher = enc.cipherForEncrypt( Constants.ALIAS_STANDARD_DATA, appContext );
+        Cipher cipher = enc.cipherForEncrypt( MCipherTestsBase.ALIAS, appContext );
         assertNotNull( "Cipher cannot be null", cipher );
 
         if ( Build.VERSION.SDK_INT >= 23 )
@@ -195,14 +195,14 @@ public class MEncryptorTests extends MCipherTestsBase {
         else
             assertNull( cipher.getIV() );
 
-        cipher = enc.cipherForEncrypt( Constants.ALIAS_LARGE_DATA, appContext );
+        cipher = enc.cipherForEncrypt( MCipherTestsBase.ALIAS_LARGE, appContext );
         assertNotNull( "Cipher cannot be null", cipher );
     }
 
     @Test
     public void getCipherLarge() throws Exception {
         byte[] iv = MCipherUtils.generateIV();
-        Cipher cipher = enc.cipherLargeData( Constants.ALIAS_LARGE_DATA, appContext, iv );
+        Cipher cipher = enc.cipherLargeData( MCipherTestsBase.ALIAS_LARGE, appContext, iv );
         assertNotNull( cipher );
         assertNotNull( cipher.getIV() );
     }
