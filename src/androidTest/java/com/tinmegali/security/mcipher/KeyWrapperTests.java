@@ -42,7 +42,7 @@ public class KeyWrapperTests extends MCipherTestsBase {
     public void setup() throws Exception {
         super.setup();
         wrapper = new MKeyWrapperForTests();
-        enc = new MEncryptorForTest();
+        enc = new MEncryptorForTest( MCipherTestsBase.ALIAS );
     }
 
     @Test
@@ -106,11 +106,11 @@ public class KeyWrapperTests extends MCipherTestsBase {
 
     private Key getEncryptionWrapperKey() throws Exception {
         if (Build.VERSION.SDK_INT < 23 ) {
-            KeyPair pair = enc.getKeyPair( enc.ALIAS_LARGE, appContext );
+            KeyPair pair = enc.getKeyPair( enc.getALIAS_LARGE(), appContext );
             assertNotNull( "Null RSA KeyPair", pair);
             return pair.getPublic();
         } else {
-            Key key = enc.getSecretKey( enc.ALIAS_STANDARD );
+            Key key = enc.getSecretKey( enc.getALIAS() );
             assertNotNull( "Null SecretKey", key );
             return key;
         }
@@ -118,11 +118,11 @@ public class KeyWrapperTests extends MCipherTestsBase {
 
     private Key getDecryptionWrapperKey() throws Exception {
         if (Build.VERSION.SDK_INT < 23 ) {
-            KeyPair pair = enc.getKeyPair( enc.ALIAS_LARGE, appContext );
+            KeyPair pair = enc.getKeyPair( enc.getALIAS_LARGE(), appContext );
             assertNotNull( "Null RSA KeyPair", pair);
             return pair.getPrivate();
         } else {
-            Key key = enc.getSecretKey( enc.ALIAS_STANDARD );
+            Key key = enc.getSecretKey( enc.getALIAS() );
             assertNotNull( "Null SecretKey", key );
             return key;
         }

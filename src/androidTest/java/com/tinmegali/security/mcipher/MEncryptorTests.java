@@ -34,12 +34,12 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class MEncryptorTests extends MCipherTestsBase {
 
-    MEncryptorForTest enc;
+    private MEncryptorForTest enc;
 
     @Before
     public void setup() throws Exception {
         super.setup();
-        enc = new MEncryptorForTest();
+        enc = new MEncryptorForTest( MCipherTestsBase.ALIAS );
         assertNotNull( enc );
     }
 

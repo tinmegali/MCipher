@@ -32,7 +32,9 @@ import java.security.UnrecoverableEntryException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.spec.AlgorithmParameterSpec;
 import java.util.Calendar;
+import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -53,10 +55,38 @@ public class MEncryptor {
 
     private final String TAG = MEncryptor.class.getSimpleName();
     private KeyStore keyStore;
-    protected String ALIAS_STANDARD = Constants.ALIAS_STANDARD_DATA;
-    protected String ALIAS_LARGE = Constants.ALIAS_LARGE_DATA;
 
-    public MEncryptor() throws EncryptorException {
+    private final String ALIAS;
+    private final String ALIAS_LARGE;
+    private String TRANSFORMATION = Constants.TRANSFORMATION;
+    private String TRANSFORMATION_LARGE = Constants.TRANSFORMATION_BC;
+    private String PROVIDER = Constants.PROVIDER_STANDARD;
+    private String PROVIDER_LARGE = Constants.PROVIDER_LARGE;
+
+    private boolean transformationStandard = true;
+
+    private AlgorithmParameterSpec CIPHER_SPECS;
+    private KeyStore.ProtectionParameter PROTECTION_PARAMS = null;
+    private char[] PASSWORD = null;
+    // SecretKey
+    private String SECRET_KEY_ALGORITHM = "AES";
+    private String[] SECRET_KEY_BLOCK_MODES = { "GCM" };
+    private String[] SECRET_KEY_PADDINGS = { "NoPadding" };
+    private boolean secretKeySpecs = true;
+    private KeyGenParameterSpec SECRET_KEY_SPECS = null;
+    // KeyPair
+    private String KEY_PAIR_ALGORITHM = "RSA";
+    private boolean certificateStandardDate = true;
+    private Date CERTIFICATE_START_DATE = null;
+    private Date CERTIFICATE_END_DATE = null;
+    private boolean certificateStandardSubject = true;
+    private X500Principal CERTIFICATE_SUBJECT = null;
+    private boolean keyPairGeneratorSpecsStandard = true;
+    private KeyPairGeneratorSpec KEY_PAIR_GENERATOR_SPECS = null;
+
+    protected MEncryptor( String alias ) throws EncryptorException {
+        ALIAS = alias;
+        ALIAS_LARGE = ALIAS + "_large";
         try {
             initKeyStore();
         } catch (CertificateException | KeyStoreException
@@ -136,7 +166,7 @@ public class MEncryptor {
             }
 
             // get the appropriate cipher for the current SDK
-            Cipher cipher = cipherForEncrypt( ALIAS_STANDARD, context );
+            Cipher cipher = cipherForEncrypt(ALIAS, context );
 
             // get an encrypted byte[], containing a IV vector if needed.
 
@@ -319,13 +349,18 @@ public class MEncryptor {
     ) throws EncryptorException
     {
         try {
-            final Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
+            final Cipher cipher = Cipher.getInstance( TRANSFORMATION );
 
             if ( Build.VERSION.SDK_INT >= 23 )
             {
                 // using Symmetric SecretKey to encrypt
                 // for API 23+
-                cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(alias));
+                // TODO create the possibility of randomness
+                if ( isTransformationStandard() ) {
+                    cipher.init( Cipher.ENCRYPT_MODE, getSecretKey(alias));
+                } else {
+                    cipher.init( Cipher.ENCRYPT_MODE, getSecretKey(alias), CIPHER_SPECS);
+                }
             }
             else
             {
@@ -365,11 +400,8 @@ public class MEncryptor {
             UnrecoverableKeyException
     {
         // tries to recover SecretKey from KeyStore
-        Key key = keyStore.getKey(alias, null);
-        if (key == null) {
-            return generateSecretKey(alias);
-        }
-        else if( !(key instanceof SecretKey) ) {
+        Key key = keyStore.getKey(alias, PASSWORD);
+        if (key == null || !(key instanceof SecretKey) ) {
             return generateSecretKey(alias);
         }
 
@@ -398,17 +430,23 @@ public class MEncryptor {
     {
             // Getting Key Generator with the symmetric algorithm AES
             final KeyGenerator keyGenerator = KeyGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_AES, Constants.ANDROID_KEY_STORE
+                    SECRET_KEY_ALGORITHM,
+                    PROVIDER
             );
 
             // defining keyGen Parameters
-            KeyGenParameterSpec specs =
-                    new KeyGenParameterSpec.Builder(alias,
-                            KeyProperties.PURPOSE_ENCRYPT
-                                    | KeyProperties.PURPOSE_DECRYPT)
-                            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                            .build();
+            KeyGenParameterSpec specs;
+            if ( isSecretKeySpecs() ) {
+                specs =
+                        new KeyGenParameterSpec.Builder(alias,
+                                KeyProperties.PURPOSE_ENCRYPT
+                                        | KeyProperties.PURPOSE_DECRYPT)
+                                .setBlockModes(SECRET_KEY_BLOCK_MODES)
+                                .setEncryptionPaddings(SECRET_KEY_PADDINGS)
+                                .build();
+            } else {
+                specs = SECRET_KEY_SPECS;
+            }
 
             keyGenerator.init(specs);
 
@@ -434,7 +472,7 @@ public class MEncryptor {
             KeyStoreException, NoSuchProviderException,
             InvalidAlgorithmParameterException
     {
-        PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias, null);
+        PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias, PASSWORD);
         Certificate certificate = keyStore.getCertificate(alias);
         PublicKey publicKey = null;
 
@@ -473,23 +511,48 @@ public class MEncryptor {
 
         final KeyPairGenerator keyGenerator =
                 KeyPairGenerator.getInstance(
-                        "RSA",
-                        Constants.ANDROID_KEY_STORE);
+                        KEY_PAIR_ALGORITHM,
+                        PROVIDER);
 
-        final Calendar startDate = Calendar.getInstance();
-        final Calendar endDate = Calendar.getInstance();
-        endDate.add(Calendar.YEAR, 20);
+        Date startDate;
+        Date endDate;
+        // check if it is using standard certificate dates
+        if ( isCertificateStandardDate() ) {
+            final Calendar startCal = Calendar.getInstance();
+            final Calendar endCal = Calendar.getInstance();
+            endCal.add(Calendar.YEAR, 20);
 
-        KeyPairGeneratorSpec specs =
-                new KeyPairGeneratorSpec.Builder( context )
-                        .setAlias( alias )
-                        .setSerialNumber(BigInteger.ONE)
-                        .setSubject(
-                                new X500Principal(
-                                        String.format("CN=%s CA Certificate", alias)))
-                        .setStartDate(startDate.getTime())
-                        .setEndDate(endDate.getTime()).build();
+            startDate = startCal.getTime();
+            endDate = endCal.getTime();
+        } else {
+            startDate = CERTIFICATE_START_DATE;
+            endDate = CERTIFICATE_END_DATE;
+        }
+        // check if it is using standard certificate subject
+        X500Principal subject;
+        if ( isCertificateStandardSubject() ) {
+            subject = new X500Principal(
+                    String.format("CN=%s CA Certificate", alias));
+        }
+        else {
+            subject = CERTIFICATE_SUBJECT;
+        }
 
+        // check if it is using standard KeyPair generator specs
+        KeyPairGeneratorSpec specs;
+        if ( isKeyPairGeneratorSpecsStandard() ) {
+            specs = new KeyPairGeneratorSpec.Builder( context )
+                            .setAlias( alias )
+                            .setSerialNumber(BigInteger.ONE)
+                            .setSubject( subject )
+                            .setStartDate( startDate )
+                            .setEndDate( endDate )
+                            .build();
+        } else {
+            specs = KEY_PAIR_GENERATOR_SPECS;
+        }
+
+        // TODO give the option to use SecureRandom
         keyGenerator.initialize( specs );
 
         return keyGenerator.generateKeyPair();
@@ -525,19 +588,14 @@ public class MEncryptor {
             KeyStoreException, IllegalBlockSizeException, IOException,
             ClassNotFoundException
     {
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC, "BC" );
+        Cipher cipher = Cipher.getInstance(
+                TRANSFORMATION_LARGE, PROVIDER_LARGE );
         // getting Bouncy Castle Secret Key
         SecretKey bcKey = getBCSecretKey( alias, context );
 
         IvParameterSpec spec = new IvParameterSpec( iv );
-//        GCMParameterSpec spec = new GCMParameterSpec(128, iv);
         cipher.init( Cipher.ENCRYPT_MODE, bcKey, spec  );
 
-//        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC );
-//        // getting Bouncy Castle Secret Key
-//        SecretKey bcKey = getBCSecretKey( alias, context );
-//
-//        cipher.init( Cipher.ENCRYPT_MODE, bcKey );
         return cipher;
     }
 
@@ -646,8 +704,166 @@ public class MEncryptor {
             KeyPair pair = getKeyPair( ALIAS_LARGE, context );
             return pair.getPublic();
         } else {
-            return getSecretKey( ALIAS_STANDARD );
+            return getSecretKey(ALIAS);
         }
+    }
+
+    // getters and setters
+
+
+    public String getALIAS() {
+        return ALIAS;
+    }
+
+    public String getALIAS_LARGE() {
+        return ALIAS_LARGE;
+    }
+
+    private void setTRANSFORMATION(String TRANSFORMATION ) {
+        this.TRANSFORMATION = TRANSFORMATION;
+        this.transformationStandard = false;
+    }
+
+    private void setTRANSFORMATION_LARGE(String TRANSFORMATION_LARGE) {
+        this.TRANSFORMATION_LARGE = TRANSFORMATION_LARGE;
+    }
+
+    private boolean isTransformationStandard() {
+        return transformationStandard;
+    }
+
+    private void setCIPHER_SPECS(AlgorithmParameterSpec CIPHER_SPECS) {
+        this.CIPHER_SPECS = CIPHER_SPECS;
+    }
+
+    private void setPROTECTION_PARAMS(
+            KeyStore.ProtectionParameter PROTECTION_PARAMS
+    ) {
+        this.PROTECTION_PARAMS = PROTECTION_PARAMS;
+    }
+
+    private void setPASSWORD(char[] PASSWORD) {
+        this.PASSWORD = PASSWORD;
+    }
+
+    private void setSECRET_KEY_ALGORITHM(String SECRET_KEY_ALGORITHM) {
+        this.SECRET_KEY_ALGORITHM = SECRET_KEY_ALGORITHM;
+    }
+
+    private void setSECRET_KEY_BLOCK_MODES(String... SECRET_KEY_BLOCK_MODES) {
+        this.SECRET_KEY_BLOCK_MODES = SECRET_KEY_BLOCK_MODES;
+    }
+
+    private void setSECRET_KEY_PADDINGS(String... SECRET_KEY_PADDINGS) {
+        this.SECRET_KEY_PADDINGS = SECRET_KEY_PADDINGS;
+    }
+
+    private boolean isSecretKeySpecs() {
+        return secretKeySpecs;
+    }
+
+    private void setSECRET_KEY_SPECS(KeyGenParameterSpec SECRET_KEY_SPECS) {
+        this.SECRET_KEY_SPECS = SECRET_KEY_SPECS;
+        this.secretKeySpecs = false;
+    }
+
+    private boolean isCertificateStandardDate() {
+        return certificateStandardDate;
+    }
+
+    private void setCERTIFICATE_DATE(Date CERTIFICATE_START_DATE, Date CERTIFICATE_END_DATE) {
+        this.CERTIFICATE_START_DATE = CERTIFICATE_START_DATE;
+        this.CERTIFICATE_END_DATE = CERTIFICATE_END_DATE;
+        this.certificateStandardDate = false;
+    }
+
+    private boolean isCertificateStandardSubject() {
+        return certificateStandardSubject;
+    }
+
+    private void setCERTIFICATE_SUBJECT(X500Principal CERTIFICATE_SUBJECT) {
+        this.CERTIFICATE_SUBJECT = CERTIFICATE_SUBJECT;
+        this.certificateStandardSubject = false;
+    }
+
+    private boolean isKeyPairGeneratorSpecsStandard() {
+        return keyPairGeneratorSpecsStandard;
+    }
+
+    private void setKEY_PAIR_GENERATOR_SPECS(KeyPairGeneratorSpec KEY_PAIR_GENERATOR_SPECS) {
+        this.KEY_PAIR_GENERATOR_SPECS = KEY_PAIR_GENERATOR_SPECS;
+        this.keyPairGeneratorSpecsStandard = false;
+    }
+
+    // builder
+    public static class Builder {
+
+        private MEncryptor encryptor;
+
+        public Builder( final String defaultAlias ) throws EncryptorException {
+            encryptor = new MEncryptor( defaultAlias );
+        }
+
+        public MEncryptor build() {
+            return encryptor;
+        }
+
+        public MEncryptor.Builder transformation(
+                String transformation,
+                AlgorithmParameterSpec spec )
+        {
+            encryptor.setTRANSFORMATION( transformation );
+            encryptor.setCIPHER_SPECS( spec );
+            return this;
+        }
+
+        public MEncryptor.Builder protectionParams(
+                KeyStore.ProtectionParameter protectionParameter
+        ) {
+            encryptor.setPROTECTION_PARAMS( protectionParameter );
+            return this;
+        }
+
+        public Builder password( char[] password ) {
+            encryptor.setPASSWORD( password );
+            return this;
+        }
+
+        public Builder secretKeyAlgorithm( String algorithm ) {
+            encryptor.setSECRET_KEY_ALGORITHM( algorithm );
+            return this;
+        }
+
+        public Builder secretKeyBlockModes( String... modes ) {
+            encryptor.setSECRET_KEY_BLOCK_MODES( modes );
+            return this;
+        }
+
+        public Builder secretKeyPaddings( String... paddings ) {
+            encryptor.setSECRET_KEY_PADDINGS( paddings );
+            return this;
+        }
+
+        public Builder secretKeySpecs( KeyGenParameterSpec specs ) {
+            encryptor.setSECRET_KEY_SPECS( specs );
+            return this;
+        }
+
+        public Builder certificateDate( Date startDate, Date endDate ) {
+            encryptor.setCERTIFICATE_DATE( startDate, endDate );
+            return this;
+        }
+
+        public Builder certificateSubject( X500Principal subject ) {
+            encryptor.setCERTIFICATE_SUBJECT( subject );
+            return this;
+        }
+
+        public Builder keyPairGeneratorSpecs( KeyPairGeneratorSpec spec ) {
+            encryptor.setKEY_PAIR_GENERATOR_SPECS( spec );
+            return this;
+        }
+
     }
 
 }

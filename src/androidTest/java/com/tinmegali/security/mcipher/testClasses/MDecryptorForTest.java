@@ -38,8 +38,8 @@ import javax.crypto.SecretKey;
 
 public class MDecryptorForTest extends MDecryptor {
 
-    public MDecryptorForTest() throws DecryptorException {
-        super();
+    public MDecryptorForTest( String alias ) throws DecryptorException {
+        super( alias );
     }
 
     @Override
@@ -67,7 +67,7 @@ public class MDecryptorForTest extends MDecryptor {
 
     @NonNull
     @Override
-    public Cipher getCipher(@NonNull String alias, @Nullable byte[] encryptionIV) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, UnrecoverableEntryException, KeyStoreException, DecryptorException {
+    protected Cipher getCipher(@NonNull String alias, @Nullable byte[] encryptionIV) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, UnrecoverableEntryException, KeyStoreException, DecryptorException, NoSuchProviderException {
         return super.getCipher(alias, encryptionIV);
     }
 

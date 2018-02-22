@@ -35,8 +35,8 @@ public class EncryptDecryptTests {
     @Before
     public void setup() throws Exception {
         appContext = InstrumentationRegistry.getTargetContext();
-        enc = new MEncryptor();
-        dec = new MDecryptor();
+        enc = new MEncryptor( MCipherTestsBase.ALIAS );
+        dec = new MDecryptor( MCipherTestsBase.ALIAS );
     }
 
     @Test

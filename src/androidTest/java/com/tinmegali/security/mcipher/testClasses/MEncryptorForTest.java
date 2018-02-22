@@ -39,11 +39,8 @@ import javax.crypto.SecretKey;
 
 public class MEncryptorForTest extends MEncryptor {
 
-    public String ALIAS_STANDARD = Constants.ALIAS_STANDARD_DATA;
-    public String ALIAS_LARGE = Constants.ALIAS_LARGE_DATA;
-
-    public MEncryptorForTest() throws EncryptorException {
-        super();
+    public MEncryptorForTest( String alias ) throws EncryptorException {
+        super( alias );
     }
 
     @Override

@@ -25,6 +25,7 @@ import java.security.PublicKey;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.spec.AlgorithmParameterSpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -42,13 +43,23 @@ import javax.crypto.spec.IvParameterSpec;
 public class MDecryptor {
 
     private static final String TAG = MDecryptor.class.getSimpleName();
-    private String ALIAS_STANDARD = Constants.ALIAS_STANDARD_DATA;
-    private String ALIAS_LARGE = Constants.ALIAS_LARGE_DATA;
+
+    private final String ALIAS_STANDARD;
+    private final String ALIAS_LARGE;
+    private String TRANSFORMATION = Constants.TRANSFORMATION;
+    private String TRANSFORMATION_LARGE = Constants.TRANSFORMATION_BC;
+    private String PROVIDER_STANDARD = Constants.PROVIDER_STANDARD;
+    private String PROVIDER_LARGE = Constants.PROVIDER_LARGE;
+    private boolean transformationStandard = true;
+    private AlgorithmParameterSpec STANDARD_SPECS;
+    private KeyStore.ProtectionParameter STANDARD_PROTECTION_PARAMS = null;
 
     private KeyStore keyStore;
 
-    public MDecryptor() throws DecryptorException
+    protected MDecryptor( final String alias ) throws DecryptorException
     {
+        ALIAS_STANDARD = alias;
+        ALIAS_LARGE = ALIAS_STANDARD + "_large";
         try {
             initKeyStore();
         } catch (CertificateException | NoSuchAlgorithmException
@@ -230,12 +241,18 @@ public class MDecryptor {
             @Nullable byte[] encryptionIV
     ) throws NoSuchAlgorithmException, NoSuchPaddingException,
             InvalidKeyException, InvalidAlgorithmParameterException,
-            UnrecoverableEntryException, KeyStoreException, DecryptorException
+            UnrecoverableEntryException, KeyStoreException,
+            DecryptorException, NoSuchProviderException
     {
-        final Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION );
+        final Cipher cipher = Cipher.getInstance( TRANSFORMATION );
 
         if (Build.VERSION.SDK_INT >= 23 ) {
-            final GCMParameterSpec specs = new GCMParameterSpec( 128, encryptionIV );
+            AlgorithmParameterSpec specs;
+            if ( isTransformationStandard() ) {
+                specs = new GCMParameterSpec(128, encryptionIV);
+            } else {
+                specs = this.STANDARD_SPECS;
+            }
             cipher.init(Cipher.DECRYPT_MODE, getSecretKey(alias), specs);
         } else {
             cipher.init(Cipher.DECRYPT_MODE, getKeyPair(alias).getPrivate() );
@@ -263,8 +280,9 @@ public class MDecryptor {
     {
 //        Log.i(TAG, String.format("getSecretKey( %s )", alias));
 
-        KeyStore.SecretKeyEntry entry = ((KeyStore.SecretKeyEntry)
-                keyStore.getEntry(alias, null));
+        KeyStore.SecretKeyEntry entry =
+                ((KeyStore.SecretKeyEntry)
+                        keyStore.getEntry(alias, STANDARD_PROTECTION_PARAMS ));
         return entry.getSecretKey();
     }
 
@@ -335,14 +353,7 @@ public class MDecryptor {
             KeyStoreException, IllegalBlockSizeException, DecryptorException,
             KeyWrapperException, IOException, ClassNotFoundException
     {
-//        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC, "BC" );
-//        SecretKey bcKey = getUnwrappedBCKey( alias, context );
-//
-//        IvParameterSpec specs = new IvParameterSpec( cipherIV );
-//
-//        cipher.init( Cipher.DECRYPT_MODE, bcKey, specs );
-
-        Cipher cipher = Cipher.getInstance( Constants.TRANSFORMATION_BC);
+        Cipher cipher = Cipher.getInstance(TRANSFORMATION_LARGE);
         SecretKey bcKey = getUnwrappedBCKey( alias, context );
         IvParameterSpec specs = new IvParameterSpec( cipherIV );
         cipher.init( Cipher.DECRYPT_MODE, bcKey, specs );
@@ -386,6 +397,64 @@ public class MDecryptor {
             return keyWrapper.loadWrappedBCKey( context, key );
         }
         throw new DecryptorException("SDK 23+ doesn't rely on BCKeys");
+    }
+
+    private void setTRANSFORMATION( String TRANSFORMATION ) {
+        this.TRANSFORMATION = TRANSFORMATION;
+        this.transformationStandard = false;
+    }
+
+    private void setTRANSFORMATION_LARGE(String TRANSFORMATION_LARGE) {
+        this.TRANSFORMATION_LARGE = TRANSFORMATION_LARGE;
+    }
+
+    public boolean isTransformationStandard() {
+        return transformationStandard;
+    }
+
+    public void setSTANDARD_SPECS(AlgorithmParameterSpec STANDARD_SPECS) {
+        this.STANDARD_SPECS = STANDARD_SPECS;
+    }
+
+    public void setSTANDARD_PROTECTION_PARAMS(
+            KeyStore.ProtectionParameter STANDARD_PROTECTION_PARAMS
+    ) {
+        this.STANDARD_PROTECTION_PARAMS = STANDARD_PROTECTION_PARAMS;
+    }
+
+    public static class Builder {
+
+        private MDecryptor decryptor;
+
+        public Builder( final String defaultAlias ) throws DecryptorException {
+            decryptor = new MDecryptor( defaultAlias );
+        }
+
+        public MDecryptor build() {
+            return decryptor;
+        }
+
+        public Builder transformation(
+                String transformation,
+                AlgorithmParameterSpec spec )
+        {
+            decryptor.setTRANSFORMATION( transformation );
+            decryptor.setSTANDARD_SPECS( spec );
+            return this;
+        }
+
+        public Builder protectionParams(
+                KeyStore.ProtectionParameter protectionParameter
+        ) {
+            decryptor.setSTANDARD_PROTECTION_PARAMS( protectionParameter );
+            return this;
+        }
+
+        public Builder transformationLarge( String transformation ) {
+            decryptor.setTRANSFORMATION_LARGE( transformation );
+            return this;
+        }
+
     }
 
 

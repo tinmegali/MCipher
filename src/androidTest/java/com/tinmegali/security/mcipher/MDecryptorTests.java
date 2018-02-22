@@ -44,10 +44,10 @@ public class MDecryptorTests extends MCipherTestsBase {
     @Before
     public void setup() throws Exception {
         super.setup();
-        enc = new MEncryptorForTest();
+        enc = new MEncryptorForTest( MCipherTestsBase.ALIAS );
         assertNotNull( enc );
 
-        dec = new MDecryptorForTest();
+        dec = new MDecryptorForTest( MCipherTestsBase.ALIAS );
         assertNotNull( dec );
 
         encryptString();

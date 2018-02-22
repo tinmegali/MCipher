@@ -2,6 +2,8 @@ package com.tinmegali.security.mcipher;
 
 import android.os.Build;
 
+import java.security.KeyStore;
+
 /**
  * Holds constant values used by the encryption/decryption
  * process by the {@link MEncryptor} and {@link MDecryptor} classes.
@@ -10,6 +12,8 @@ import android.os.Build;
 public class Constants {
 
 
+    protected final static String PROVIDER_STANDARD = "AndroidKeyStore";
+    protected final static String PROVIDER_LARGE = "BC";
     public final static String ALIAS_STANDARD_DATA     = "com.tinmegali.security.cipher._standard";
     public final static String ALIAS_LARGE_DATA        = "com.tinmegali.security.cipher._large";
 
