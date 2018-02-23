@@ -11,11 +11,17 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.Key;
 import java.security.KeyPair;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.SecretKey;
 
 import static org.junit.Assert.*;
@@ -122,36 +128,107 @@ public class MEncryptorDefaultTests extends MCipherTestsBase {
             alias = MCipherTestsBase.ALIAS;
         }
 
-        SecretKey generatedBCKey = enc.getBCSecretKey( alias, appContext );
+        SecretKey generatedBCKey = enc.getLargeSecretKey( alias, appContext );
         assertNotNull( "Bouncy Castle Key wasn't generated correctly", generatedBCKey );
 
-        SecretKey loadedBCKey = enc.getBCSecretKey( alias, appContext );
+        SecretKey loadedBCKey = enc.getLargeSecretKey( alias, appContext );
         assertNotNull( "Bouncy Castle Key wasn't loaded correctly", loadedBCKey );
 
     }
 
     @Test
     public void encryptLarge() throws Exception {
-        byte[] d4 = enc.encryptLargeData( MCipherUtils.decode(s4) , appContext );
-        assertEncryption( d4 );
+        if ( Build.VERSION.SDK_INT < 23 ) {
+            byte[] d4 = enc.encrypt(MCipherUtils.decode(s4), appContext);
+            assertEncryption(d4);
 
-        byte[] iv = MCipherUtils.generateIV();
-        assertNotNull( iv );
-        Cipher cipher = enc.cipherLargeData( MCipherTestsBase.ALIAS_LARGE, appContext, iv );
-        assertNotNull( cipher );
+            byte[] iv = MCipherUtils.generateIV();
+            assertNotNull(iv);
+            Cipher cipher = enc.cipherLargeData(MCipherTestsBase.ALIAS_LARGE, appContext, iv);
+            assertNotNull(cipher);
 
-        byte[] toEncrypt = MCipherUtils.decode( s4 );
-        byte[] encryptedData = cipher.doFinal( toEncrypt );
+            byte[] toEncrypt = MCipherUtils.decode(s4);
+            byte[] encryptedData = cipher.doFinal(toEncrypt);
 
-        byte[] encryptedObj = MEncryptedObject.serializeEncryptedObj( encryptedData, iv );
+            byte[] encryptedObj = MEncryptedObject.serializeEncryptedObj(encryptedData, iv);
 
+            assertNotNull(encryptedObj);
+
+            MEncryptedObject obj = MEncryptedObject.getEncryptedObject(encryptedObj);
+            assertNotNull(obj.getData());
+            assertTrue(Arrays.equals(obj.getData(), encryptedData));
+            assertNotNull(obj.getCypherIV());
+            assertTrue(Arrays.equals(obj.getCypherIV(), iv));
+        }
+    }
+
+//    @Test
+    public void discoverBlockLimitForEncryption() throws Exception {
+        // during tests, the limit was 4073
+        StringBuilder s = new StringBuilder(s4);
+        int size = 0;
+        try {
+            for (; ; ) {
+                s.append("s");
+                byte[] data = s.toString().getBytes("UTF-8");
+                size = data.length;
+                System.out.println("Size: " + size);
+                Cipher cipher = enc.cipherForEncrypt("alias", appContext);
+
+                byte[] encrypted = cipher.doFinal(data);
+                assertNotNull(encrypted);
+
+            }
+        } catch (IllegalBlockSizeException e) {
+            System.out.println("Illegal size: " + size);
+        }
+
+    }
+
+    @Test
+    public void encryptRealLargeStrings() throws Exception {
+        if ( Build.VERSION.SDK_INT >= 23 ) {
+        Cipher cipher = Cipher.getInstance( MCipherConstants.TRANSFORMATION );
+            SecretKey key = enc.generateSecretKey("alias");
+            cipher.init(Cipher.ENCRYPT_MODE, key);
+        assertNotNull(cipher);
+
+        InputStream in = new ByteArrayInputStream( bigText.getBytes("UTF-8") );
+        CipherInputStream cipherIn = new CipherInputStream( in, cipher );
+
+        // making the encryption
+        ArrayList<Byte> values = new ArrayList<>();
+        int nextByte;
+        while ((nextByte = cipherIn.read()) != -1) {
+            values.add((byte) nextByte);
+        }
+
+        // recovering the encrypted data
+        byte[] encryptedData = new byte[values.size()];
+        for (int i = 0; i < encryptedData.length; i++) {
+            encryptedData[i] = values.get(i);
+        }
+        assertNotNull( encryptedData );
+
+        byte[] encryptedObj = MEncryptedObject.serializeEncryptedObj(encryptedData, cipher.getIV());
+
+        assertNotNull(encryptedObj);
+
+        MEncryptedObject obj = MEncryptedObject.getEncryptedObject(encryptedObj);
+        assertNotNull(obj.getData());
+        assertTrue(Arrays.equals(obj.getData(), encryptedData));
+        assertNotNull(obj.getCypherIV());
+        assertTrue(Arrays.equals(obj.getCypherIV(), cipher.getIV()));
+
+        cipher = enc.cipherForEncrypt( "alias", appContext );
+        encryptedObj = enc.encryptWithStream( bigText.getBytes("UTF-8"), cipher );
         assertNotNull( encryptedObj );
 
-        MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedObj );
-        assertNotNull( obj.getData() );
-        assertTrue( Arrays.equals( obj.getData(), encryptedData ));
-        assertNotNull( obj.getCypherIV() );
-        assertTrue( Arrays.equals( obj.getCypherIV(), iv ) );
+
+        encryptedObj = enc.encrypt( bigText, appContext );
+        assertNotNull( encryptedObj );
+        }
+
     }
 
     @Test
@@ -195,16 +272,20 @@ public class MEncryptorDefaultTests extends MCipherTestsBase {
         else
             assertNull( cipher.getIV() );
 
-        cipher = enc.cipherForEncrypt( MCipherTestsBase.ALIAS_LARGE, appContext );
-        assertNotNull( "Cipher cannot be null", cipher );
+        if ( Build.VERSION.SDK_INT < 23 ) {
+            cipher = enc.cipherForEncrypt(MCipherTestsBase.ALIAS_LARGE, appContext);
+            assertNotNull("Cipher cannot be null", cipher);
+        }
     }
 
     @Test
     public void getCipherLarge() throws Exception {
-        byte[] iv = MCipherUtils.generateIV();
-        Cipher cipher = enc.cipherLargeData( MCipherTestsBase.ALIAS_LARGE, appContext, iv );
-        assertNotNull( cipher );
-        assertNotNull( cipher.getIV() );
+        if ( Build.VERSION.SDK_INT < 23 ) {
+            byte[] iv = MCipherUtils.generateIV();
+            Cipher cipher = enc.cipherLargeData(MCipherTestsBase.ALIAS_LARGE, appContext, iv);
+            assertNotNull(cipher);
+            assertNotNull(cipher.getIV());
+        }
     }
 
 }

@@ -13,7 +13,9 @@ import android.util.Log;
 import com.tinmegali.security.mcipher.exceptions.MEncryptorException;
 import com.tinmegali.security.mcipher.exceptions.MKeyWrapperException;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -33,11 +35,13 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
@@ -143,7 +147,6 @@ public class MEncryptorDefault implements MEncryptor {
             throws MEncryptorException {
 //        Log.i(TAG, String.format("encrypt( %s )", textToEncrypt));
         byte[] decoded = MCipherUtils.decode(textToEncrypt);
-
         return encrypt(decoded, context);
     }
 
@@ -174,11 +177,10 @@ public class MEncryptorDefault implements MEncryptor {
     /**
      * Encrypts a given byte array, returning a encrypted byte array.
      *
-     * It calls a different process {@link #encryptLarge(byte[], Cipher, byte[])}
-     * for big chunks of data, when the method is called from SDK previous to 23.
+     * It calls a {@link #encryptLargeData(byte[], Context)} for big chunks of data.
      *
-     * For smaller chunks of data or any size of data called from SDK 23+, the encryption
-     * is done by the {@link #encryptLargeData(byte[], Context)} method.
+     * For smaller chunks of data the encryption
+     * is done by the {@link #encryptData(byte[], Cipher)} method.
      *
      * @param dataToEncrypt byte array to be encrypted.
      * @param context the context must only be passed when the method is called from SDK previous to 23.
@@ -196,13 +198,14 @@ public class MEncryptorDefault implements MEncryptor {
         {
             // call 'encryptLargeData' for big block sizes
             // called from older SDKs
-            if ( Build.VERSION.SDK_INT < 23 && dataToEncrypt.length >= (256-11) ) {
-                if ( context == null )
+            if ( dataToEncrypt.length >= (256-11) ) {
+                if ( context == null && Build.VERSION.SDK_INT < 23 )
                 {
                     String msg = "Context cannot be null when calling 'encryptData' from" +
                             "older SDKs (SDK < 23).";
                     throw new MEncryptorException( msg );
                 }
+                assert context != null;
                 return encryptLargeData( dataToEncrypt, context );
             }
 
@@ -228,26 +231,27 @@ public class MEncryptorDefault implements MEncryptor {
                             "%n\tCause: %s",
                     e.getClass().getSimpleName(),
                     e.getMessage(),
-                    e.getCause() );
+                    e );
             Log.e(TAG, errorMsg );
             throw new MEncryptorException( errorMsg, e );
         }
     }
 
     /**
-     * Uses AES algorithm to encrypt large chunks of data. If the method
-     * is called from SDK 23+, it will make a standard encryption operation,
-     * calling {@link MEncryptorDefault#encrypt(String, Context)}. If the method
-     * id called from SDK < 23, it will make the encryption using
-     * an AES algorithm, from the Bouncy Castle provider calling
-     * {@link MEncryptorDefault#cipherLargeData(String, Context, byte[])}.
+     * Encrypt large chunks of data.
+     *
+     * If the method is called from SDK 23+, it will get a {@link Cipher} and make the
+     * encryption with {@link #encryptWithStream(byte[], Cipher)}.
+     *
+     * If the method is called from SDK < 23, it will {@link Cipher}
+     * using a wrapped SecretKey, then it will call {@link #encryptWithStream(byte[], Cipher)}.
      *
      * @param dataToEncrypt data to encrypt
      * @param context current Context
      * @return an encrypted byte array of the data
      * @throws MEncryptorException for any errors.
      * @see #cipherLargeData(String, Context, byte[])
-     * @see #encryptLarge(byte[], Cipher, byte[])
+     * @see #encryptWithStream(byte[], Cipher)
      */
     byte[] encryptLargeData(
             @NonNull final byte[] dataToEncrypt,
@@ -256,18 +260,17 @@ public class MEncryptorDefault implements MEncryptor {
 
         try {
             if ( Build.VERSION.SDK_INT >= 23 ) {
-                return encrypt( dataToEncrypt, context );
+                return encryptWithStream( dataToEncrypt, cipherForEncrypt( ALIAS, context ) );
             } else {
                 byte[] iv = MCipherUtils.generateIV();
                 Cipher cipher = cipherLargeData( ALIAS_LARGE, context, iv );
-                return encryptLarge(  dataToEncrypt , cipher, iv );
+                return encryptWithStream(  dataToEncrypt , cipher );
             }
         } catch (NoSuchPaddingException | NoSuchAlgorithmException
                 | InvalidAlgorithmParameterException | InvalidKeyException
                 | NoSuchProviderException | KeyStoreException
                 | IllegalBlockSizeException | UnrecoverableEntryException
-                | IOException | SignatureException | ClassNotFoundException
-                | BadPaddingException e)
+                | IOException | ClassNotFoundException e)
         {
             String errorMsg = String.format(
                     "Something went wrong while trying to encrypt." +
@@ -323,16 +326,37 @@ public class MEncryptorDefault implements MEncryptor {
         return MEncryptedObject.serializeEncryptedObj( encryptedData, cipherIV );
     }
 
-    private byte[] encryptLarge(final byte[] toEncrypt, Cipher cipher, byte[] iv)
-            throws UnrecoverableEntryException, NoSuchAlgorithmException,
-            KeyStoreException, NoSuchProviderException, NoSuchPaddingException,
-            InvalidKeyException, IOException, InvalidAlgorithmParameterException,
-            SignatureException, BadPaddingException, IllegalBlockSizeException
+    /**
+     * Encrypt large chunks of data using {@link CipherInputStream}.
+     *
+     * @param toEncrypt data to encrypt
+     * @param cipher a cipher to be used in the encryption.
+     * @return a encrypted byte array.
+     *
+     * @throws IOException
+     * @throws MEncryptorException
+     */
+    protected byte[] encryptWithStream(final byte[] toEncrypt, Cipher cipher )
+            throws IOException, MEncryptorException
     {
-        // Add the cipher IV at the encrypted data
-        byte[] encryptedData = cipher.doFinal( toEncrypt );
 
-        return MEncryptedObject.serializeLargeEncryptedObj( encryptedData, iv );
+        InputStream in = new ByteArrayInputStream( toEncrypt );
+        CipherInputStream cipherIn = new CipherInputStream( in, cipher );
+
+        // making the encryption
+        ArrayList<Byte> values = new ArrayList<>();
+        int nextByte;
+        while ((nextByte = cipherIn.read()) != -1) {
+            values.add((byte) nextByte);
+        }
+
+        // recovering the encrypted data
+        byte[] encryptedData = new byte[values.size()];
+        for (int i = 0; i < encryptedData.length; i++) {
+            encryptedData[i] = values.get(i);
+        }
+
+        return MEncryptedObject.serializeLargeEncryptedObj(encryptedData, cipher.getIV());
     }
 
     /**
@@ -411,12 +435,16 @@ public class MEncryptorDefault implements MEncryptor {
             UnrecoverableKeyException
     {
         // tries to recover SecretKey from KeyStore
-        Key key = keyStore.getKey(alias, PASSWORD);
-        if (key == null || !(key instanceof SecretKey) ) {
+        try {
+            Key key = keyStore.getKey(alias, PASSWORD);
+            if (key == null || !(key instanceof SecretKey)) {
+                return generateSecretKey(alias);
+            }
+
+            return (SecretKey) key;
+        } catch (UnrecoverableKeyException e) {
             return generateSecretKey(alias);
         }
-
-        return (SecretKey) key;
     }
 
     /**
@@ -571,8 +599,9 @@ public class MEncryptorDefault implements MEncryptor {
         keyGenerator.initialize( specs );
 
         return keyGenerator.generateKeyPair();
-
     }
+
+
 
     /**
      * Generate a {@link Cipher} to be used with the in the encryption of
@@ -599,7 +628,7 @@ public class MEncryptorDefault implements MEncryptor {
      * @throws KeyStoreException
      * @throws IllegalBlockSizeException
      *
-     * @see #getBCSecretKey(String, Context)
+     * @see #getLargeSecretKey(String, Context)
      */
     protected Cipher cipherLargeData(
             @NonNull final String alias,
@@ -615,7 +644,7 @@ public class MEncryptorDefault implements MEncryptor {
         Cipher cipher = Cipher.getInstance(
                 TRANSFORMATION_LARGE, PROVIDER_LARGE );
         // getting Bouncy Castle Secret Key
-        SecretKey bcKey = getBCSecretKey( alias, context );
+        SecretKey bcKey = getLargeSecretKey( alias, context );
 
         IvParameterSpec spec = new IvParameterSpec( iv );
         cipher.init( Cipher.ENCRYPT_MODE, bcKey, spec  );
@@ -652,7 +681,7 @@ public class MEncryptorDefault implements MEncryptor {
      * @see MKeyWrapper#loadWrappedLargeKey(Context, Key, String)
      * @see #wrapAndStoreLargeKey(Context, SecretKey)
      */
-    protected SecretKey getBCSecretKey(
+    protected SecretKey getLargeSecretKey(
             @NonNull final String alias,
             @NonNull final Context context
     )

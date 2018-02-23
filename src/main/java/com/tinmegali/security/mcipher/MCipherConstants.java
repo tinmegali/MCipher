@@ -18,9 +18,12 @@ public class MCipherConstants {
 
     // block mode
     public static final String BLOCK_MODE_GCM = "GCM";
+    public static final String BLOCK_MODE_CBC = "CBC";
 
     // paddings
     public static final String PADDING_NO_PADDING = "NoPadding";
+    public static final String PADDING_PKCS1 = "PKCS1Padding";
+    public static final String PADDING_PKCS7 = "PKCS7Padding";
 
     /**
      * Cypher transformation.
@@ -37,6 +40,9 @@ public class MCipherConstants {
             TRANSFORMATION = "RSA/ECB/PKCS1Padding";
         }
     }
+
+    // TODO testing transformation for really large string
+    static final String TRANSFORMATION_LARGE = "AES/CBC/PKCS7Padding";
 
     /**
      * Cypher Transformation to use with the Bouncy Castle provider. This

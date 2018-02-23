@@ -10,7 +10,9 @@ import android.util.Log;
 import com.tinmegali.security.mcipher.exceptions.MDecryptorException;
 import com.tinmegali.security.mcipher.exceptions.MKeyWrapperException;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -26,9 +28,11 @@ import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.ArrayList;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
@@ -97,9 +101,8 @@ public class MDecryptorDefault implements MDecryptor {
     /**
      * Decrypt a given byte array, returning a byte array.
      *
-     * For SDKs previous to 23, checks if the encrypted data is
-     * considered 'large', and calls {@link #decryptLargeData(byte[], Context)}
-     * if necessary.
+     * Checks if the encrypted data is considered 'large',
+     * and calls {@link #decryptLargeData(byte[], Context)} if necessary.
      *
      * Notice that for the method to work, the {@link MDecryptor} configuration
      * must be compatible with the configuration used on the {@link MEncryptor}
@@ -129,7 +132,7 @@ public class MDecryptorDefault implements MDecryptor {
                     MEncryptedObject.getEncryptedObject( encryptedData );
 
             // verify if the data was encrypted using large data encryption
-            if ( Build.VERSION.SDK_INT < 23 && encryptedObject.isLarge() )
+            if ( encryptedObject.isLarge() )
                 return decryptLargeData( encryptedData, context );
 
             // notice that CipherIV will be null for API 18 < 23
@@ -216,10 +219,12 @@ public class MDecryptorDefault implements MDecryptor {
     }
 
     /**
-     * Decrypts large chunks of data for SDKs previous to 23.
+     * Decrypts large chunks of data.
      *
-     * It loads a {@link Cipher} used to wrap a SecretKey used during the
-     * encryption process and then uses this Cipher to decrypt and return the data.
+     * For SDK previous to 23, it loads a {@link Cipher} used to wrap a SecretKey used during the
+     * encryption process and then uses this Cipher to decrypt with {@link #decryptWithStream(byte[], Cipher)}.
+     *
+     * For SDK 23+, call {@link #decryptWithStream(byte[], Cipher)}.
      *
      * The encrypted data must contain the vector IV used during encryption, that is
      * obtained by a deserialization of a {@link MEncryptedObject}.
@@ -232,30 +237,31 @@ public class MDecryptorDefault implements MDecryptor {
      * @see MEncryptedObject#getEncryptedObject(byte[])
      * @see MEncryptedObject#getCypherIV()
      * @see #wrapperCipher(String, Context, byte[])
-     * @see #decryptData(byte[], Cipher)
+     * @see #decryptWithStream(byte[], Cipher)
      */
     @NonNull
     protected byte[] decryptLargeData(
             final byte[] encryptedData,
             final Context context
     ) throws MDecryptorException {
-        byte[] decrypted;
         try {
+            MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedData );
             if ( Build.VERSION.SDK_INT >= 23 ) {
-                decrypted = decrypt( encryptedData, context );
+                // SDK 23+
+                final Cipher cipher = getCipher(ALIAS, obj.getCypherIV());
+                return decryptWithStream( obj.getData(), cipher);
             } else {
-                MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedData );
+                // SDK 19|22
                 Cipher cipher = wrapperCipher(ALIAS_LARGE, context, obj.getCypherIV());
-                decrypted = decryptData( obj.getData(), cipher );
+//                decrypted = decryptData( obj.getData(), cipher );
+                return decryptWithStream( obj.getData(), cipher );
             }
-            return decrypted;
 
         } catch (NoSuchPaddingException | NoSuchAlgorithmException
                 | UnrecoverableEntryException | InvalidKeyException
                 | NoSuchProviderException | InvalidAlgorithmParameterException
                 | IllegalBlockSizeException | KeyStoreException
-                | BadPaddingException | MKeyWrapperException
-                | IOException | ClassNotFoundException e)
+                | MKeyWrapperException | IOException | ClassNotFoundException e)
         {
 
             String errorMsg = String.format(
@@ -266,6 +272,38 @@ public class MDecryptorDefault implements MDecryptor {
             Log.e(TAG, errorMsg);
             throw new MDecryptorException( errorMsg, e );
         }
+    }
+
+    /**
+     * Decrypt large chunks of data using {@link CipherInputStream}.
+     *
+     * @param toDecrypt data to decrypt
+     * @param cipher cipher used in the decryption
+     * @return a decrypted byte array
+     * @throws IOException
+     */
+    protected byte[] decryptWithStream(byte[] toDecrypt, Cipher cipher )
+            throws IOException
+    {
+
+        InputStream in = new ByteArrayInputStream( toDecrypt );
+        CipherInputStream cipherIn = new CipherInputStream( in, cipher );
+
+        // making the encryption
+        ArrayList<Byte> values = new ArrayList<>();
+        int nextByte;
+        while ((nextByte = cipherIn.read()) != -1) {
+            values.add((byte) nextByte);
+        }
+
+        // recovering the encrypted data
+        byte[] encryptedData = new byte[values.size()];
+        for (int i = 0; i < encryptedData.length; i++) {
+            encryptedData[i] = values.get(i);
+        }
+
+        return encryptedData;
+
     }
 
     /**

@@ -54,7 +54,7 @@ task exportJAR(dependsOn: "assemble" + buildType.capitalize(), type: Copy, group
     String sourceDir = "${buildDir.getPath()}/intermediates/bundles/" + buildType + "/"
 
     // how the .jar file is called when we build the module
-    String sourceFilename = "classes.jar"
+    String sourceFilename = "mcipher.jar"
 
     // how we want to call the .jar file when importing into Unity
     String targetFilename = "com.tinmegali.android.-${project.name}.jar"

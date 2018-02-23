@@ -64,7 +64,7 @@ public class MDecryptorDefaultTests extends MCipherTestsBase {
         e1 = enc.encrypt( s1, appContext );
         e2 = enc.encrypt( s2, appContext );
         e3 = enc.encrypt( s3, appContext );
-        e4 = enc.encryptLargeData( s4, appContext );
+        e4 = enc.encrypt( s4, appContext );
     }
 
     @Test
@@ -89,7 +89,7 @@ public class MDecryptorDefaultTests extends MCipherTestsBase {
             String alias = MCipherTestsBase.ALIAS_LARGE;
 
             deleteSavedKeys();
-            SecretKey originalKey = enc.getBCSecretKey( MCipherTestsBase.ALIAS, appContext );
+            SecretKey originalKey = enc.getLargeSecretKey( MCipherTestsBase.ALIAS, appContext );
 
             SecretKey bcKey = dec.getUnwrappedLargeKey(alias, appContext);
             assertNotNull(bcKey);
@@ -133,34 +133,36 @@ public class MDecryptorDefaultTests extends MCipherTestsBase {
     public void decryptLarge() throws Exception {
         deleteSavedKeys();
 
-        byte[] encryptedObj = enc.encryptLargeData( s4, appContext );
+        byte[] encryptedObj = enc.encrypt( s4, appContext );
         assertNotNull( encryptedObj );
-        byte[] decryptedObj = dec.decryptLargeData( encryptedObj, appContext );
+        byte[] decryptedObj = dec.decrypt( encryptedObj, appContext );
         assertNotNull( decryptedObj );
 
     }
 
     @Test
     public void decryptLargeSteps() throws Exception {
-        deleteSavedKeys();
+        if ( Build.VERSION.SDK_INT < 23 ) {
+            deleteSavedKeys();
 
-        byte[] encryptedObj = enc.encryptLargeData( s4, appContext );
+            byte[] encryptedObj = enc.encrypt(s4, appContext);
 
-        assertNotNull( encryptedObj );
+            assertNotNull(encryptedObj);
 
-        MEncryptedObject obj = MEncryptedObject.getEncryptedObject( encryptedObj );
-        assertNotNull( obj.getData() );
-        assertNotNull( obj.getCypherIV() );
+            MEncryptedObject obj = MEncryptedObject.getEncryptedObject(encryptedObj);
+            assertNotNull(obj.getData());
+            assertNotNull(obj.getCypherIV());
 
-        Cipher cipherDec = Cipher.getInstance( MCipherTestsBase.TRANSFORMATION_BC );
-        SecretKey bcKey = dec.getUnwrappedLargeKey( MCipherTestsBase.ALIAS_LARGE, appContext );
-        IvParameterSpec specs = new IvParameterSpec( obj.getCypherIV() );
-        cipherDec.init( Cipher.DECRYPT_MODE, bcKey, specs );
-        assertNotNull( cipherDec );
-        assertTrue( Arrays.equals( cipherDec.getIV(), obj.getCypherIV() ) );
+            Cipher cipherDec = Cipher.getInstance(MCipherTestsBase.TRANSFORMATION_BC);
+            SecretKey bcKey = dec.getUnwrappedLargeKey(MCipherTestsBase.ALIAS_LARGE, appContext);
+            IvParameterSpec specs = new IvParameterSpec(obj.getCypherIV());
+            cipherDec.init(Cipher.DECRYPT_MODE, bcKey, specs);
+            assertNotNull(cipherDec);
+            assertTrue(Arrays.equals(cipherDec.getIV(), obj.getCypherIV()));
 
-        byte[] decrypted = cipherDec.doFinal( obj.getData() );
-        assertNotNull( decrypted );
+            byte[] decrypted = cipherDec.doFinal(obj.getData());
+            assertNotNull(decrypted);
+        }
     }
 
     private void assertDecryption(byte[] decrypted, String original) {
@@ -176,9 +178,18 @@ public class MDecryptorDefaultTests extends MCipherTestsBase {
     }
 
     @Test
+    public void decryptLargeStrings() throws Exception {
+        String encrypted = enc.encryptString( bigText, appContext );
+        assertNotNull( encrypted );
+        String decrypted = dec.decryptString( encrypted, appContext );
+        assertNotNull( decrypted );
+        assertTrue( bigText.equals( decrypted ) );
+    }
+
+    @Test
     public void wrapperCipher() throws Exception {
         if ( !isVersion23Up() ) {
-            e4 = enc.encryptLargeData( s4, appContext );
+            e4 = enc.encrypt( s4, appContext );
             byte[] cipherIV = MEncryptedObject.getEncryptedObject( e4 ).getCypherIV();
             Cipher cipher = dec.wrapperCipher( MCipherTestsBase.ALIAS_LARGE, appContext, cipherIV );
             assertNotNull( cipher );

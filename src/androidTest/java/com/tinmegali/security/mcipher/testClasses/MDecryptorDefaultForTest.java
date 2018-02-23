@@ -68,6 +68,11 @@ public class MDecryptorDefaultForTest extends MDecryptorDefault {
         return super.decryptLargeData(encryptedData, context);
     }
 
+    @Override
+    public byte[] decryptWithStream(byte[] toDecrypt, Cipher cipher) throws IOException {
+        return super.decryptWithStream(toDecrypt, cipher);
+    }
+
     @NonNull
     @Override
     public byte[] decryptData(@NonNull byte[] ecryptedData, @NonNull Cipher cipher) throws UnsupportedEncodingException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, UnrecoverableEntryException, KeyStoreException, NoSuchProviderException {

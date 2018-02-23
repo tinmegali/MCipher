@@ -78,6 +78,11 @@ public class MEncryptorDefaultForTest extends MEncryptorDefault {
     }
 
     @Override
+    public byte[] encryptWithStream(byte[] toEncrypt, Cipher cipher) throws IOException, MEncryptorException {
+        return super.encryptWithStream(toEncrypt, cipher);
+    }
+
+    @Override
     public SecretKey getSecretKey(String alias) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, KeyStoreException, UnrecoverableKeyException {
         return super.getSecretKey(alias);
     }
@@ -98,8 +103,8 @@ public class MEncryptorDefaultForTest extends MEncryptorDefault {
     }
 
     @Override
-    public SecretKey getBCSecretKey(@NonNull String alias, @NonNull Context context) throws NoSuchPaddingException, UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, InvalidKeyException, NoSuchProviderException, InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, ClassNotFoundException {
-        return super.getBCSecretKey(alias, context);
+    public SecretKey getLargeSecretKey(@NonNull String alias, @NonNull Context context) throws NoSuchPaddingException, UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, InvalidKeyException, NoSuchProviderException, InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, ClassNotFoundException {
+        return super.getLargeSecretKey(alias, context);
     }
 
     @Override
