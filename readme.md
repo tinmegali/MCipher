@@ -1,6 +1,6 @@
 # MCipher Library
 ###### A Simple Encryption and Decryption Library for Android
-- VERSION 0.3
+- VERSION 0.4
 - [Documentation](https://tinmegali.github.io/MCipher/javadoc/)
 - Compatible with from **SDK 19**
 
@@ -54,11 +54,11 @@ Don't forget to point to *`jcenter`* distribution center.
 <dependency>
     <groupId>com.tinmegali.android</groupId>
     <artifactId>mcipher</artifactId>
-    <version>0.3</version>
+    <version>0.4</version>
     <type>pom</type>
 </dependency>
 ```
 ###### Gradle
 ```
-compile 'com.tinmegali.android:mcipher:0.3'
+compile 'com.tinmegali.android:mcipher:0.4'
 ```
