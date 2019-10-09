@@ -12,21 +12,8 @@ import java.security.cert.CertificateException;
  */
 public class MDecryptorBuilder {
 
-    private MDecryptorDefault decryptor;
-
-    /**
-     * Constructs a new {@link MDecryptor} builder.
-     *
-     * @param defaultAlias the unique identifier used by all operation done in the {@link java.security.KeyStore}.
-     *                     A good alias would be your package name plus an identifier, like
-     *                     'my.package.name.key'. Notice that the alias must the exactly the same
-     *                     used during the encryption process.
-     *
-     * @throws MDecryptorException thrown if it finds some problem during the instantiation.
-     */
-    public MDecryptorBuilder( final String defaultAlias ) throws MDecryptorException {
-        decryptor = new MDecryptorDefault( defaultAlias );
-    }
+    private static final String TAG = MEncryptorBuilder.class.getSimpleName();
+    private static MEncryptorDefault encryptor;
 
     /**
      * Builds the {@link MDecryptor} with a initialized {@link java.security.KeyStore}.
@@ -34,18 +21,25 @@ public class MDecryptorBuilder {
      * @return an initialized {@link MDecryptor}.
      * @throws MDecryptorException thrown if it finds some problem during the initialization.
      */
-    public MDecryptor build() throws MDecryptorException {
-        try {
-            decryptor.initKeyStore();
-            return decryptor;
-        } catch (CertificateException | NoSuchAlgorithmException
-                | IOException | KeyStoreException e) {
-            String errorMsg =
-                    String.format("Something went wrong while initiating the KeyStore." +
-                            "%n\t%s", e.getMessage());
-            throw new MDecryptorException( errorMsg, e );
+    public static MEncryptor build( final String defaultAlias ) throws MEncryptorException {
+        Log.d(TAG, "build: " + defaultAlias);
+        if (encryptor == null) {
+            Log.d(TAG, "creating new 'encryptor' instance:" + defaultAlias);
+            encryptor = new MEncryptorDefault(defaultAlias);
+            try {
+                encryptor.initKeyStore();
+                return encryptor;
+            } catch (CertificateException | KeyStoreException
+                    | IOException | NoSuchAlgorithmException e) {
+                String errorMsg =
+                        String.format("Something went wrong while initiating the KeyStore." +
+                                "%n\t%s", e.getMessage());
+                throw new MEncryptorException(errorMsg, e);
+            }
+        } else {
+            Log.d(TAG, "returning 'encryptor' instance");
+            return encryptor;
         }
-
     }
 
     // TODO turn 'ON' the MDecryptorBuilder options
