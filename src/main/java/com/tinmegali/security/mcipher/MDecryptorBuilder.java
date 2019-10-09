@@ -12,8 +12,8 @@ import java.security.cert.CertificateException;
  */
 public class MDecryptorBuilder {
 
-    private static final String TAG = MEncryptorBuilder.class.getSimpleName();
-    private static MEncryptorDefault encryptor;
+    private static final String TAG = MDecryptorBuilder.class.getSimpleName();
+    private static MDecryptorDefault decryptor;
 
     /**
      * Builds the {@link MDecryptor} with a initialized {@link java.security.KeyStore}.
@@ -21,24 +21,23 @@ public class MDecryptorBuilder {
      * @return an initialized {@link MDecryptor}.
      * @throws MDecryptorException thrown if it finds some problem during the initialization.
      */
-    public static MEncryptor build( final String defaultAlias ) throws MEncryptorException {
-        Log.d(TAG, "build: " + defaultAlias);
-        if (encryptor == null) {
-            Log.d(TAG, "creating new 'encryptor' instance:" + defaultAlias);
-            encryptor = new MEncryptorDefault(defaultAlias);
+    public static MDecryptor build( final String defaultAlias ) throws MDecryptorException {
+        if (decryptor == null) {
+            Log.d(TAG, "creating new 'decryptor' instance: " + defaultAlias);
+            decryptor = new MDecryptorDefault( defaultAlias );
             try {
-                encryptor.initKeyStore();
-                return encryptor;
-            } catch (CertificateException | KeyStoreException
-                    | IOException | NoSuchAlgorithmException e) {
+                decryptor.initKeyStore();
+                return decryptor;
+            } catch (CertificateException | NoSuchAlgorithmException
+                    | IOException | KeyStoreException e) {
                 String errorMsg =
                         String.format("Something went wrong while initiating the KeyStore." +
                                 "%n\t%s", e.getMessage());
-                throw new MEncryptorException(errorMsg, e);
+                throw new MDecryptorException(errorMsg, e);
             }
         } else {
-            Log.d(TAG, "returning 'encryptor' instance");
-            return encryptor;
+            Log.d(TAG, "returning decryptor instance: alias: " + decryptor.getAlias());
+            return decryptor;
         }
     }
 
