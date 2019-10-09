@@ -12,20 +12,8 @@ import java.security.cert.CertificateException;
  */
 public class MEncryptorBuilder {
 
-    private MEncryptorDefault encryptor;
-
-    /**
-     * Constructs a new {@link MEncryptor} builder.
-     *
-     * @param defaultAlias the unique identifier used by all operation done in the {@link java.security.KeyStore}.
-     *                     A good alias would be your package name plus an identifier, like
-     *                     'my.package.name.key'.
-     *
-     * @throws MEncryptorException thrown if it finds some problem during the instantiation.
-     */
-    public MEncryptorBuilder( final String defaultAlias ) throws MEncryptorException {
-        encryptor = new MEncryptorDefault( defaultAlias );
-    }
+    private static final String TAG = MEncryptorBuilder.class.getSimpleName();
+    private static MEncryptorDefault encryptor;
 
     /**
      * Builds the {@link MEncryptor} with a initialized {@link java.security.KeyStore}.
@@ -34,16 +22,24 @@ public class MEncryptorBuilder {
      *
      * @throws MEncryptorException thrown if it finds some problem during the initialization.
      */
-    public MEncryptor build() throws MEncryptorException {
-        try {
-            encryptor.initKeyStore();
+    public static MEncryptor build( final String defaultAlias ) throws MEncryptorException {
+        Log.d(TAG, "build: " + defaultAlias);
+        if (encryptor == null) {
+            Log.d(TAG, "creating new 'encryptor' instance:" + defaultAlias);
+            encryptor = new MEncryptorDefault(defaultAlias);
+            try {
+                encryptor.initKeyStore();
+                return encryptor;
+            } catch (CertificateException | KeyStoreException
+                    | IOException | NoSuchAlgorithmException e) {
+                String errorMsg =
+                        String.format("Something went wrong while initiating the KeyStore." +
+                                "%n\t%s", e.getMessage());
+                throw new MEncryptorException(errorMsg, e);
+            }
+        } else {
+            Log.d(TAG, "returning 'encryptor' instance");
             return encryptor;
-        } catch (CertificateException | KeyStoreException
-                | IOException | NoSuchAlgorithmException e) {
-            String errorMsg =
-                    String.format("Something went wrong while initiating the KeyStore." +
-                            "%n\t%s", e.getMessage());
-            throw new MEncryptorException( errorMsg, e );
         }
     }
     // TODO turn 'ON' the MEncryptorBuilder options
