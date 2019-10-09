@@ -1,5 +1,7 @@
 package com.tinmegali.security.mcipher;
 
+import android.util.Log;
+
 import com.tinmegali.security.mcipher.exceptions.MDecryptorException;
 
 import java.io.IOException;
