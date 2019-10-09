@@ -6,8 +6,8 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 27
-        versionCode 2
-        versionName "0.4"
+        versionCode 3
+        versionName "0.5"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -37,7 +37,7 @@ dependencies {
 String unityAssetsDir = "${rootDir.getPath()}/../../../unity/UnityPlugins/UnityPlugins/Assets/"
 
 // path to the specific directory inside the Assets folder
-String unityTargetDir = unityAssetsDir + "Plugins/Android/"
+String unityTargetDir = "${buildDir.getPath()}/outputs/aar/unity/"
 
 // how to call the tasks group on the Gradle View
 String taskGroupName = "plugins"
@@ -57,7 +57,7 @@ task exportJAR(dependsOn: "assemble" + buildType.capitalize(), type: Copy, group
     String sourceFilename = "mcipher.jar"
 
     // how we want to call the .jar file when importing into Unity
-    String targetFilename = "com.tinmegali.android.-${project.name}.jar"
+    String targetFilename = "com.tinmegali.android.-${project.name}.${android.defaultConfig.versionName}.jar"
 
     // copy the .jar file into the Unity folder
     // include the .jar file and rename it
@@ -79,7 +79,7 @@ task exportAAR(dependsOn: "assemble" + buildType.capitalize(), type: Copy, group
     String sourceFilename = "${project.name}-" + buildType + ".aar"
 
     // how we want to call the .aar file when importing into Unity
-    String targetFilename = "com.tinmegali.android.-${project.name}.aar"
+    String targetFilename = "com.tinmegali.android.${project.name}.${android.defaultConfig.versionName}.aar"
 
     // copy the .aar file into the Unity folder
     // include the .aar file and rename it
