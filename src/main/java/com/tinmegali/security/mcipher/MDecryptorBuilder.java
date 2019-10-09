@@ -34,18 +34,24 @@ public class MDecryptorBuilder {
      * @return an initialized {@link MDecryptor}.
      * @throws MDecryptorException thrown if it finds some problem during the initialization.
      */
-    public MDecryptor build() throws MDecryptorException {
-        try {
-            decryptor.initKeyStore();
+    public static MDecryptor build( final String defaultAlias ) throws MDecryptorException {
+        if (decryptor == null) {
+            Log.d(TAG, "creating new 'decryptor' instance: " + defaultAlias);
+            decryptor = new MDecryptorDefault( defaultAlias );
+            try {
+                decryptor.initKeyStore();
+                return decryptor;
+            } catch (CertificateException | NoSuchAlgorithmException
+                    | IOException | KeyStoreException e) {
+                String errorMsg =
+                        String.format("Something went wrong while initiating the KeyStore." +
+                                "%n\t%s", e.getMessage());
+                throw new MDecryptorException(errorMsg, e);
+            }
+        } else {
+            Log.d(TAG, "returning decryptor instance: alias: " + decryptor.getAlias());
             return decryptor;
-        } catch (CertificateException | NoSuchAlgorithmException
-                | IOException | KeyStoreException e) {
-            String errorMsg =
-                    String.format("Something went wrong while initiating the KeyStore." +
-                            "%n\t%s", e.getMessage());
-            throw new MDecryptorException( errorMsg, e );
         }
-
     }
 
     // TODO turn 'ON' the MDecryptorBuilder options
